@@ -10,7 +10,7 @@ export function Footer() {
               <div className="w-10 h-10 bg-accent rounded-lg flex items-center justify-center">
                 <Shield className="w-6 h-6 text-accent-foreground" />
               </div>
-              <span className="text-xl font-display font-bold text-primary-foreground">ExamShield</span>
+              <span className="text-xl font-display font-bold text-primary-foreground">GRIZZLY INTEGRATED</span>
             </div>
             <p className="text-sm text-primary-foreground/60">
               India's most trusted online exam platform for JEE and NEET preparation.
@@ -50,7 +50,7 @@ export function Footer() {
 
         <div className="border-t border-primary-foreground/10 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-sm text-primary-foreground/50">
-            © 2024 ExamShield. All rights reserved.
+            © 2024 GRIZZLY INTEGRATED. All rights reserved.
           </p>
           <div className="flex items-center gap-6 text-sm text-primary-foreground/50">
             <a href="#" className="hover:text-primary-foreground transition-colors">Twitter</a>

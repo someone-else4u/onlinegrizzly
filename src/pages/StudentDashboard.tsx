@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { 
   Shield, 
@@ -13,6 +14,7 @@ import {
   Bell
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 const upcomingTests = [
   {
@@ -53,8 +55,31 @@ const recentResults = [
   { test: "Chemistry Full Test", score: 85, total: 100, percentile: 91.5, rank: 8234 },
 ];
 
-export default function Dashboard() {
+export default function StudentDashboard() {
   const navigate = useNavigate();
+  const { signOut, profile, isAuthenticated, isStudent, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      navigate('/login');
+    }
+    if (!loading && isAuthenticated && !isStudent) {
+      navigate('/admin-dashboard');
+    }
+  }, [isAuthenticated, isStudent, loading, navigate]);
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/');
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-foreground">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -65,7 +90,7 @@ export default function Dashboard() {
             <div className="w-10 h-10 bg-accent rounded-lg flex items-center justify-center">
               <Shield className="w-6 h-6 text-accent-foreground" />
             </div>
-            <span className="text-xl font-display font-bold text-foreground">ExamShield</span>
+            <span className="text-xl font-display font-bold text-foreground">GRIZZLY INTEGRATED</span>
           </div>
 
           <div className="flex items-center gap-4">
@@ -75,7 +100,7 @@ export default function Dashboard() {
             <Button variant="ghost" size="icon">
               <User className="w-5 h-5" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
+            <Button variant="ghost" size="icon" onClick={handleLogout}>
               <LogOut className="w-5 h-5" />
             </Button>
           </div>
@@ -86,7 +111,7 @@ export default function Dashboard() {
         {/* Welcome Section */}
         <div className="mb-8">
           <h1 className="text-3xl font-display font-bold text-foreground mb-2">
-            Welcome back, Rahul! 👋
+            Welcome back, {profile?.name || 'Student'}! 👋
           </h1>
           <p className="text-muted-foreground">Ready to ace your next test? Your preparation stats look great!</p>
         </div>
