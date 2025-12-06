@@ -23,7 +23,7 @@ export function Hero() {
               <div className="w-10 h-10 bg-accent rounded-lg flex items-center justify-center">
                 <Shield className="w-6 h-6 text-accent-foreground" />
               </div>
-              <span className="text-xl font-display font-bold text-primary-foreground">ExamShield</span>
+              <span className="text-xl font-display font-bold text-primary-foreground">GRIZZLY INTEGRATED</span>
             </div>
             <div className="hidden md:flex items-center gap-8 text-primary-foreground/80">
               <a href="#features" className="hover:text-primary-foreground transition-colors">Features</a>

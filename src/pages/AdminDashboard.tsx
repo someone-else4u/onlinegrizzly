@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
@@ -9,9 +9,7 @@ import {
   Plus,
   Search,
   Filter,
-  MoreVertical,
   Calendar,
-  Clock,
   Eye,
   Edit,
   Trash2,
@@ -22,6 +20,7 @@ import {
   ChevronRight
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 const recentTests = [
   { id: '1', title: 'JEE Main Mock #15', type: 'Full Length', status: 'active', students: 1245, avgScore: 78, date: 'Dec 10, 2024' },
@@ -39,16 +38,39 @@ const topStudents = [
 ];
 
 const sidebarItems = [
-  { icon: BarChart3, label: 'Dashboard', active: true },
-  { icon: FileText, label: 'Tests' },
-  { icon: Users, label: 'Students' },
-  { icon: BarChart3, label: 'Analytics' },
-  { icon: Settings, label: 'Settings' },
+  { icon: BarChart3, label: 'Dashboard', active: true, path: '/admin-dashboard' },
+  { icon: FileText, label: 'Tests', path: '/admin/tests' },
+  { icon: Users, label: 'Students', path: '/admin/students' },
+  { icon: BarChart3, label: 'Analytics', path: '/admin/analytics' },
+  { icon: Settings, label: 'Settings', path: '/admin/settings' },
 ];
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  const { signOut, profile, isAuthenticated, isAdmin, loading } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      navigate('/login');
+    }
+    if (!loading && isAuthenticated && !isAdmin) {
+      navigate('/student-dashboard');
+    }
+  }, [isAuthenticated, isAdmin, loading, navigate]);
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/');
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-foreground">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -60,7 +82,7 @@ export default function AdminDashboard() {
               <Shield className="w-6 h-6 text-accent-foreground" />
             </div>
             <div>
-              <span className="font-display font-bold text-foreground block">ExamShield</span>
+              <span className="font-display font-bold text-foreground block">GRIZZLY INTEGRATED</span>
               <span className="text-xs text-muted-foreground">Admin Portal</span>
             </div>
           </div>
@@ -70,11 +92,14 @@ export default function AdminDashboard() {
           <ul className="space-y-1">
             {sidebarItems.map((item, index) => (
               <li key={index}>
-                <button className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  item.active 
-                    ? 'bg-accent text-accent-foreground' 
-                    : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
-                }`}>
+                <button 
+                  onClick={() => navigate(item.path)}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                    item.active 
+                      ? 'bg-accent text-accent-foreground' 
+                      : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+                  }`}
+                >
                   <item.icon className="w-5 h-5" />
                   {item.label}
                 </button>
@@ -84,7 +109,7 @@ export default function AdminDashboard() {
         </nav>
 
         <div className="p-4 border-t border-border">
-          <Button variant="ghost" className="w-full justify-start" onClick={() => navigate('/')}>
+          <Button variant="ghost" className="w-full justify-start" onClick={handleLogout}>
             <LogOut className="w-4 h-4 mr-2" />
             Logout
           </Button>
@@ -98,7 +123,7 @@ export default function AdminDashboard() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-display font-bold text-foreground">Dashboard</h1>
-              <p className="text-sm text-muted-foreground">Welcome back, Admin</p>
+              <p className="text-sm text-muted-foreground">Welcome back, {profile?.name || 'Admin'}</p>
             </div>
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="icon">

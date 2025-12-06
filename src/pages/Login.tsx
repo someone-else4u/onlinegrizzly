@@ -1,31 +1,73 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Shield, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
+import { z } from "zod";
+
+const loginSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+});
 
 export default function Login() {
   const navigate = useNavigate();
+  const { signIn, isAuthenticated, role, loading } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
 
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (!loading && isAuthenticated && role) {
+      if (role === 'admin') {
+        navigate('/admin-dashboard');
+      } else {
+        navigate('/student-dashboard');
+      }
+    }
+  }, [isAuthenticated, role, loading, navigate]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrors({});
+
+    // Validate form
+    const result = loginSchema.safeParse(formData);
+    if (!result.success) {
+      const fieldErrors: { email?: string; password?: string } = {};
+      result.error.errors.forEach(err => {
+        if (err.path[0] === 'email') fieldErrors.email = err.message;
+        if (err.path[0] === 'password') fieldErrors.password = err.message;
+      });
+      setErrors(fieldErrors);
+      return;
+    }
+
     setIsLoading(true);
     
-    // Simulate login - replace with actual auth
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    const { error } = await signIn(formData.email, formData.password);
     
-    toast.success("Welcome back! Redirecting to dashboard...");
-    navigate("/dashboard");
+    if (!error) {
+      // Navigation will happen via useEffect when role is fetched
+    }
+    
     setIsLoading(false);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-hero flex items-center justify-center">
+        <div className="text-primary-foreground">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-hero flex items-center justify-center p-4">
@@ -45,7 +87,7 @@ export default function Login() {
             <div className="w-10 h-10 bg-accent rounded-lg flex items-center justify-center">
               <Shield className="w-6 h-6 text-accent-foreground" />
             </div>
-            <span className="text-xl font-display font-bold text-foreground">ExamShield</span>
+            <span className="text-xl font-display font-bold text-foreground">GRIZZLY INTEGRATED</span>
           </div>
 
           <h1 className="text-2xl font-display font-bold text-foreground mb-2">Welcome back</h1>
@@ -53,15 +95,16 @@ export default function Login() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email or Roll Number</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
-                type="text"
-                placeholder="Enter your email or roll number"
+                type="email"
+                placeholder="Enter your email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 required
               />
+              {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
             </div>
 
             <div className="space-y-2">
@@ -83,6 +126,7 @@ export default function Login() {
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+              {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
             </div>
 
             <div className="flex items-center justify-between text-sm">
