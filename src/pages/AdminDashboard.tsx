@@ -21,21 +21,7 @@ import {
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-
-const recentTests = [
-  { id: '1', title: 'JEE Main Mock #15', type: 'Full Length', status: 'active', students: 1245, avgScore: 78, date: 'Dec 10, 2024' },
-  { id: '2', title: 'Physics Chapter Test', type: 'Chapter', status: 'scheduled', students: 0, avgScore: 0, date: 'Dec 15, 2024' },
-  { id: '3', title: 'Chemistry Quick Test', type: 'Practice', status: 'completed', students: 892, avgScore: 82, date: 'Dec 8, 2024' },
-  { id: '4', title: 'NEET Biology Full Test', type: 'Full Length', status: 'completed', students: 2341, avgScore: 71, date: 'Dec 5, 2024' },
-];
-
-const topStudents = [
-  { rank: 1, name: 'Priya Sharma', score: 298, percentile: 99.8 },
-  { rank: 2, name: 'Rahul Verma', score: 295, percentile: 99.5 },
-  { rank: 3, name: 'Ankit Kumar', score: 292, percentile: 99.2 },
-  { rank: 4, name: 'Sneha Patel', score: 290, percentile: 98.9 },
-  { rank: 5, name: 'Vikash Singh', score: 288, percentile: 98.5 },
-];
+import { useAdminDashboardData } from "@/hooks/useDashboardData";
 
 const sidebarItems = [
   { icon: BarChart3, label: 'Dashboard', active: true, path: '/admin-dashboard' },
@@ -47,30 +33,35 @@ const sidebarItems = [
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  const { signOut, profile, isAuthenticated, isAdmin, loading } = useAuth();
+  const { signOut, profile, isAuthenticated, isAdmin, loading: authLoading } = useAuth();
+  const { stats, recentTests, topPerformers, loading: dataLoading } = useAdminDashboardData();
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    if (!loading && !isAuthenticated) {
+    if (!authLoading && !isAuthenticated) {
       navigate('/login');
     }
-    if (!loading && isAuthenticated && !isAdmin) {
+    if (!authLoading && isAuthenticated && !isAdmin) {
       navigate('/student-dashboard');
     }
-  }, [isAuthenticated, isAdmin, loading, navigate]);
+  }, [isAuthenticated, isAdmin, authLoading, navigate]);
 
   const handleLogout = async () => {
     await signOut();
     navigate('/');
   };
 
-  if (loading) {
+  if (authLoading || dataLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-foreground">Loading...</div>
       </div>
     );
   }
+
+  const filteredTests = recentTests.filter(test => 
+    test.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -143,10 +134,10 @@ export default function AdminDashboard() {
           {/* Stats Grid */}
           <div className="grid grid-cols-4 gap-6 mb-8">
             {[
-              { label: 'Total Tests', value: '48', change: '+5 this month', color: 'bg-accent/10 text-accent' },
-              { label: 'Active Students', value: '12,450', change: '+234 this week', color: 'bg-success/10 text-success' },
-              { label: 'Tests Today', value: '3', change: '2 ongoing', color: 'bg-primary/10 text-primary' },
-              { label: 'Avg. Score', value: '76%', change: '+2.3% vs last month', color: 'bg-warning/10 text-warning' },
+              { label: 'Total Tests', value: stats.totalTests.toString(), change: '', color: 'bg-accent/10 text-accent' },
+              { label: 'Active Students', value: stats.totalStudents.toLocaleString(), change: '', color: 'bg-success/10 text-success' },
+              { label: 'Tests Today', value: stats.testsToday.toString(), change: '', color: 'bg-primary/10 text-primary' },
+              { label: 'Avg. Score', value: stats.avgScore > 0 ? `${stats.avgScore}%` : '-', change: '', color: 'bg-warning/10 text-warning' },
             ].map((stat, index) => (
               <div key={index} className="bg-card rounded-xl border border-border p-6">
                 <div className={`w-10 h-10 rounded-lg ${stat.color} flex items-center justify-center mb-3`}>
@@ -154,7 +145,6 @@ export default function AdminDashboard() {
                 </div>
                 <div className="text-2xl font-bold text-foreground mb-1">{stat.value}</div>
                 <div className="text-sm text-muted-foreground">{stat.label}</div>
-                <div className="text-xs text-success mt-2">{stat.change}</div>
               </div>
             ))}
           </div>
@@ -186,57 +176,71 @@ export default function AdminDashboard() {
               </div>
 
               <div className="p-6">
-                <div className="space-y-4">
-                  {recentTests.map((test) => (
-                    <div key={test.id} className="flex items-center justify-between p-4 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
-                          <FileText className="w-5 h-5 text-accent" />
+                {filteredTests.length === 0 ? (
+                  <div className="text-center py-12">
+                    <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-foreground mb-2">No tests created yet</h3>
+                    <p className="text-muted-foreground mb-4">Create your first test to get started</p>
+                    <Link to="/admin/tests/create">
+                      <Button variant="accent">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Create Your First Test
+                      </Button>
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {filteredTests.map((test) => (
+                      <div key={test.id} className="flex items-center justify-between p-4 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
+                            <FileText className="w-5 h-5 text-accent" />
+                          </div>
+                          <div>
+                            <h4 className="font-medium text-foreground">{test.title}</h4>
+                            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                              <span>{test.type}</span>
+                              <span>•</span>
+                              <span className="flex items-center gap-1">
+                                <Calendar className="w-3 h-3" />
+                                {test.date}
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <h4 className="font-medium text-foreground">{test.title}</h4>
-                          <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                            <span>{test.type}</span>
-                            <span>•</span>
-                            <span className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              {test.date}
-                            </span>
+
+                        <div className="flex items-center gap-6">
+                          <div className="text-right">
+                            <div className="font-medium text-foreground">{test.studentCount.toLocaleString()}</div>
+                            <div className="text-xs text-muted-foreground">Students</div>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-medium text-foreground">{test.avgScore || '-'}%</div>
+                            <div className="text-xs text-muted-foreground">Avg Score</div>
+                          </div>
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            test.status === 'published' ? 'bg-success/10 text-success' :
+                            test.status === 'draft' ? 'bg-warning/10 text-warning' :
+                            'bg-secondary text-secondary-foreground'
+                          }`}>
+                            {test.status}
+                          </span>
+                          <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
                           </div>
                         </div>
                       </div>
-
-                      <div className="flex items-center gap-6">
-                        <div className="text-right">
-                          <div className="font-medium text-foreground">{test.students.toLocaleString()}</div>
-                          <div className="text-xs text-muted-foreground">Students</div>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-medium text-foreground">{test.avgScore || '-'}%</div>
-                          <div className="text-xs text-muted-foreground">Avg Score</div>
-                        </div>
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          test.status === 'active' ? 'bg-success/10 text-success' :
-                          test.status === 'scheduled' ? 'bg-warning/10 text-warning' :
-                          'bg-secondary text-secondary-foreground'
-                        }`}>
-                          {test.status}
-                        </span>
-                        <div className="flex items-center gap-1">
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -252,30 +256,39 @@ export default function AdminDashboard() {
               </div>
 
               <div className="p-6">
-                <div className="space-y-4">
-                  {topStudents.map((student) => (
-                    <div key={student.rank} className="flex items-center gap-4">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
-                        student.rank === 1 ? 'bg-accent text-accent-foreground' :
-                        student.rank === 2 ? 'bg-muted text-muted-foreground' :
-                        student.rank === 3 ? 'bg-warning/20 text-warning' :
-                        'bg-secondary text-secondary-foreground'
-                      }`}>
-                        {student.rank}
+                {topPerformers.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Users className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-muted-foreground">No submissions yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {topPerformers.map((student) => (
+                      <div key={student.userId} className="flex items-center gap-4">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
+                          student.rank === 1 ? 'bg-accent text-accent-foreground' :
+                          student.rank === 2 ? 'bg-muted text-muted-foreground' :
+                          student.rank === 3 ? 'bg-warning/20 text-warning' :
+                          'bg-secondary text-secondary-foreground'
+                        }`}>
+                          {student.rank}
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-medium text-foreground">{student.name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {student.totalMarks > 0 ? Math.round((student.score / student.totalMarks) * 100) : 0}%
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold text-foreground">{student.score}</div>
+                          <div className="text-xs text-muted-foreground">/{student.totalMarks}</div>
+                        </div>
                       </div>
-                      <div className="flex-1">
-                        <div className="font-medium text-foreground">{student.name}</div>
-                        <div className="text-xs text-muted-foreground">{student.percentile}%ile</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-bold text-foreground">{student.score}</div>
-                        <div className="text-xs text-muted-foreground">/300</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
 
-                <Button variant="outline" className="w-full mt-6">
+                <Button variant="outline" className="w-full mt-6" disabled={topPerformers.length === 0}>
                   <Download className="w-4 h-4 mr-2" />
                   Export Leaderboard
                 </Button>
