@@ -1,8 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Shield, Clock, Trophy, Users } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useLandingStats } from "@/hooks/useLandingStats";
 
 export function Hero() {
+  const { stats } = useLandingStats();
+
   return (
     <section className="relative min-h-screen bg-gradient-hero overflow-hidden">
       {/* Background Pattern */}
@@ -49,7 +52,7 @@ export function Hero() {
         <div className="max-w-4xl mx-auto text-center mt-16">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-foreground/10 border border-primary-foreground/20 mb-8 animate-fade-in">
             <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-            <span className="text-sm text-primary-foreground/80">Trusted by 50,000+ JEE & NEET Aspirants</span>
+            <span className="text-sm text-primary-foreground/80">Secure Exam Platform for JEE & NEET Aspirants</span>
           </div>
 
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-display font-bold text-primary-foreground mb-6 leading-tight animate-slide-up">
@@ -76,13 +79,13 @@ export function Hero() {
             </Link>
           </div>
 
-          {/* Stats */}
+          {/* Stats - Shows real data */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-20 animate-slide-up" style={{ animationDelay: '0.3s' }}>
             {[
-              { icon: Users, value: '50,000+', label: 'Active Students' },
-              { icon: Trophy, value: '1,200+', label: 'Top 1000 Rankers' },
-              { icon: Clock, value: '10M+', label: 'Tests Completed' },
-              { icon: Shield, value: '99.9%', label: 'Cheating Detection' },
+              { icon: Users, value: stats.totalStudents.toLocaleString(), label: 'Registered Students' },
+              { icon: Trophy, value: stats.totalTests.toLocaleString(), label: 'Published Tests' },
+              { icon: Clock, value: stats.totalSubmissions.toLocaleString(), label: 'Tests Completed' },
+              { icon: Shield, value: '100%', label: 'Secure Testing' },
             ].map((stat, index) => (
               <div key={index} className="text-center p-6 rounded-2xl bg-primary-foreground/5 border border-primary-foreground/10 hover:bg-primary-foreground/10 transition-colors">
                 <stat.icon className="w-8 h-8 text-accent mx-auto mb-3" />

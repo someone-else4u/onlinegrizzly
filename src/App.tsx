@@ -12,6 +12,7 @@ import ExamInterface from "./pages/ExamInterface";
 import TestResults from "./pages/TestResults";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
+import CreateTest from "./pages/admin/CreateTest";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();

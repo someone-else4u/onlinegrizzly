@@ -41,6 +41,151 @@ export type Database = {
         }
         Relationships: []
       }
+      questions: {
+        Row: {
+          correct_option: string
+          created_at: string
+          difficulty: string
+          id: string
+          marks: number
+          negative_marks: number
+          option_a: string
+          option_b: string
+          option_c: string
+          option_d: string
+          question_image_url: string | null
+          question_text: string
+          test_id: string
+          topic: string | null
+        }
+        Insert: {
+          correct_option: string
+          created_at?: string
+          difficulty?: string
+          id?: string
+          marks?: number
+          negative_marks?: number
+          option_a: string
+          option_b: string
+          option_c: string
+          option_d: string
+          question_image_url?: string | null
+          question_text: string
+          test_id: string
+          topic?: string | null
+        }
+        Update: {
+          correct_option?: string
+          created_at?: string
+          difficulty?: string
+          id?: string
+          marks?: number
+          negative_marks?: number
+          option_a?: string
+          option_b?: string
+          option_c?: string
+          option_d?: string
+          question_image_url?: string | null
+          question_text?: string
+          test_id?: string
+          topic?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "questions_test_id_fkey"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "tests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      submissions: {
+        Row: {
+          correct_answers: number
+          id: string
+          score: number
+          submitted_at: string
+          test_id: string
+          time_taken: number | null
+          total_marks: number
+          unanswered: number
+          user_id: string
+          wrong_answers: number
+        }
+        Insert: {
+          correct_answers?: number
+          id?: string
+          score?: number
+          submitted_at?: string
+          test_id: string
+          time_taken?: number | null
+          total_marks?: number
+          unanswered?: number
+          user_id: string
+          wrong_answers?: number
+        }
+        Update: {
+          correct_answers?: number
+          id?: string
+          score?: number
+          submitted_at?: string
+          test_id?: string
+          time_taken?: number | null
+          total_marks?: number
+          unanswered?: number
+          user_id?: string
+          wrong_answers?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submissions_test_id_fkey"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "tests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tests: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          duration: number
+          id: string
+          status: string
+          title: string
+          total_questions: number
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          duration?: number
+          id?: string
+          status?: string
+          title: string
+          total_questions?: number
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          duration?: number
+          id?: string
+          status?: string
+          title?: string
+          total_questions?: number
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

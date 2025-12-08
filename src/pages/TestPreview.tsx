@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { 
   Shield, 
@@ -10,9 +10,12 @@ import {
   Camera,
   Keyboard,
   Mouse,
-  ArrowLeft
+  ArrowLeft,
+  Loader2
 } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 const systemRequirements = [
   { icon: Monitor, label: "Full Screen Mode", status: "ready", description: "Browser will enter full screen" },
@@ -22,7 +25,6 @@ const systemRequirements = [
 ];
 
 const instructions = [
-  "This test contains 90 questions divided into Physics, Chemistry, and Mathematics.",
   "Each correct answer carries +4 marks and each incorrect answer carries -1 mark.",
   "You can mark questions for review and navigate freely between questions.",
   "The test will auto-submit when the time runs out.",
@@ -32,27 +34,92 @@ const instructions = [
   "Once started, the test cannot be paused."
 ];
 
+interface Test {
+  id: string;
+  title: string;
+  duration: number;
+  total_questions: number;
+  type: string;
+  description: string | null;
+}
+
 export default function TestPreview() {
   const navigate = useNavigate();
   const { testId } = useParams();
+  const { isAuthenticated, loading: authLoading } = useAuth();
+  const [test, setTest] = useState<Test | null>(null);
+  const [loading, setLoading] = useState(true);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      navigate('/login');
+    }
+  }, [authLoading, isAuthenticated, navigate]);
+
+  useEffect(() => {
+    if (testId) {
+      fetchTest();
+    }
+  }, [testId]);
+
+  const fetchTest = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tests')
+        .select('*')
+        .eq('id', testId)
+        .maybeSingle();
+
+      if (error) throw error;
+      setTest(data);
+    } catch (error) {
+      console.error('Error fetching test:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleStartTest = async () => {
     if (!agreedToTerms) return;
     
     setIsChecking(true);
-    // Simulate system check
     await new Promise(resolve => setTimeout(resolve, 1500));
     navigate(`/test/${testId}/exam`);
   };
+
+  if (authLoading || loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-accent" />
+      </div>
+    );
+  }
+
+  if (!test) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <FileText className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-foreground mb-2">Test Not Found</h2>
+          <p className="text-muted-foreground mb-4">This test doesn't exist or has been removed.</p>
+          <Link to="/student-dashboard">
+            <Button variant="accent">Back to Dashboard</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const totalMarks = test.total_questions * 4;
 
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-card border-b border-border">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link to="/dashboard" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+          <Link to="/student-dashboard" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft className="w-4 h-4" />
             Back to Dashboard
           </Link>
@@ -60,7 +127,7 @@ export default function TestPreview() {
             <div className="w-8 h-8 bg-accent rounded-lg flex items-center justify-center">
               <Shield className="w-5 h-5 text-accent-foreground" />
             </div>
-            <span className="font-display font-bold text-foreground">ExamShield</span>
+            <span className="font-display font-bold text-foreground">GRIZZLY INTEGRATED</span>
           </div>
         </div>
       </header>
@@ -69,13 +136,16 @@ export default function TestPreview() {
         {/* Test Info Card */}
         <div className="bg-gradient-hero rounded-2xl p-8 mb-8">
           <h1 className="text-2xl md:text-3xl font-display font-bold text-primary-foreground mb-4">
-            JEE Main Full Mock Test #1
+            {test.title}
           </h1>
+          {test.description && (
+            <p className="text-primary-foreground/70 mb-4">{test.description}</p>
+          )}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { icon: Clock, label: "Duration", value: "3 Hours" },
-              { icon: FileText, label: "Questions", value: "90" },
-              { label: "Total Marks", value: "300" },
+              { icon: Clock, label: "Duration", value: `${test.duration} min` },
+              { icon: FileText, label: "Questions", value: test.total_questions.toString() },
+              { label: "Total Marks", value: totalMarks.toString() },
               { label: "Negative Marking", value: "-1 per wrong" },
             ].map((item, index) => (
               <div key={index} className="text-primary-foreground">
@@ -176,7 +246,7 @@ export default function TestPreview() {
             >
               {isChecking ? "Checking System..." : "Start Test"}
             </Button>
-            <Link to="/dashboard">
+            <Link to="/student-dashboard">
               <Button variant="outline" size="lg">
                 Cancel
               </Button>
