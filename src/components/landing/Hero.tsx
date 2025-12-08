@@ -1,13 +1,12 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Shield, Clock, Trophy, Users } from "lucide-react";
+import { ArrowRight, Clock, Trophy, Users, Award } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useLandingStats } from "@/hooks/useLandingStats";
-
 export function Hero() {
-  const { stats } = useLandingStats();
-
-  return (
-    <section className="relative min-h-screen bg-gradient-hero overflow-hidden">
+  const {
+    stats
+  } = useLandingStats();
+  return <section className="relative min-h-screen bg-gradient-hero overflow-hidden">
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-20 left-10 w-72 h-72 bg-accent rounded-full blur-3xl" />
@@ -24,7 +23,7 @@ export function Hero() {
           <div className="container mx-auto px-4 py-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-10 h-10 bg-accent rounded-lg flex items-center justify-center">
-                <Shield className="w-6 h-6 text-accent-foreground" />
+                <Award className="text-accent-foreground bg-black/0 w-[30px] h-[30px]" />
               </div>
               <span className="text-xl font-display font-bold text-primary-foreground">GRIZZLY INTEGRATED</span>
             </div>
@@ -60,12 +59,16 @@ export function Hero() {
             <span className="block text-gradient">JEE & NEET Success</span>
           </h1>
 
-          <p className="text-lg md:text-xl text-primary-foreground/70 mb-10 max-w-2xl mx-auto animate-slide-up" style={{ animationDelay: '0.1s' }}>
+          <p className="text-lg md:text-xl text-primary-foreground/70 mb-10 max-w-2xl mx-auto animate-slide-up" style={{
+          animationDelay: '0.1s'
+        }}>
             Enterprise-grade proctoring with AI-powered cheating detection. 
             Practice with real exam conditions and track your All India Rank.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-slide-up" style={{ animationDelay: '0.2s' }}>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-slide-up" style={{
+          animationDelay: '0.2s'
+        }}>
             <Link to="/register">
               <Button variant="hero" className="group">
                 Start Free Trial
@@ -80,22 +83,32 @@ export function Hero() {
           </div>
 
           {/* Stats - Shows real data */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-20 animate-slide-up" style={{ animationDelay: '0.3s' }}>
-            {[
-              { icon: Users, value: stats.totalStudents.toLocaleString(), label: 'Registered Students' },
-              { icon: Trophy, value: stats.totalTests.toLocaleString(), label: 'Published Tests' },
-              { icon: Clock, value: stats.totalSubmissions.toLocaleString(), label: 'Tests Completed' },
-              { icon: Shield, value: '100%', label: 'Secure Testing' },
-            ].map((stat, index) => (
-              <div key={index} className="text-center p-6 rounded-2xl bg-primary-foreground/5 border border-primary-foreground/10 hover:bg-primary-foreground/10 transition-colors">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-20 animate-slide-up" style={{
+          animationDelay: '0.3s'
+        }}>
+            {[{
+            icon: Users,
+            value: stats.totalStudents.toLocaleString(),
+            label: 'Registered Students'
+          }, {
+            icon: Trophy,
+            value: stats.totalTests.toLocaleString(),
+            label: 'Published Tests'
+          }, {
+            icon: Clock,
+            value: stats.totalSubmissions.toLocaleString(),
+            label: 'Tests Completed'
+          }, {
+            icon: Shield,
+            value: '100%',
+            label: 'Secure Testing'
+          }].map((stat, index) => <div key={index} className="text-center p-6 rounded-2xl bg-primary-foreground/5 border border-primary-foreground/10 hover:bg-primary-foreground/10 transition-colors">
                 <stat.icon className="w-8 h-8 text-accent mx-auto mb-3" />
                 <div className="text-2xl md:text-3xl font-bold text-primary-foreground mb-1">{stat.value}</div>
                 <div className="text-sm text-primary-foreground/60">{stat.label}</div>
-              </div>
-            ))}
+              </div>)}
           </div>
         </div>
       </div>
-    </section>
-  );
+    </section>;
 }
