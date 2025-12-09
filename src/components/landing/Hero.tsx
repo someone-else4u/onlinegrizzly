@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Clock, Trophy, Users, Award } from "lucide-react";
+import { ArrowRight, Clock, Trophy, Users, Award, Shield } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useLandingStats } from "@/hooks/useLandingStats";
 export function Hero() {
