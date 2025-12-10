@@ -5,11 +5,11 @@ import {
   Plus,
   Search,
   FileText,
-  Calendar,
   Eye,
   Edit,
   Trash2,
-  Clock
+  Clock,
+  ListChecks
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { AdminSidebar } from "@/components/AdminSidebar";
@@ -148,6 +148,15 @@ export default function TestsList() {
                           {test.status}
                         </span>
                         <div className="flex items-center gap-1">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-8"
+                            onClick={() => navigate(`/admin/tests/${test.id}/questions`)}
+                          >
+                            <ListChecks className="w-4 h-4 mr-1" />
+                            Questions
+                          </Button>
                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(`/admin/tests/${test.id}`)}>
                             <Eye className="w-4 h-4" />
                           </Button>

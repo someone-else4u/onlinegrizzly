@@ -1,19 +1,20 @@
 import { 
-  Shield, 
   FileText, 
   Users, 
   BarChart3, 
   MessageSquare,
   Settings,
   LogOut,
-  Trophy
+  Trophy,
+  LayoutDashboard
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { Logo } from "@/components/Logo";
 
 const sidebarItems = [
-  { icon: BarChart3, label: 'Dashboard', path: '/admin-dashboard' },
+  { icon: LayoutDashboard, label: 'Dashboard', path: '/admin-dashboard' },
   { icon: FileText, label: 'Tests', path: '/admin/tests' },
   { icon: Users, label: 'Students', path: '/admin/students' },
   { icon: BarChart3, label: 'Analytics', path: '/admin/analytics' },
@@ -41,16 +42,8 @@ export function AdminSidebar() {
 
   return (
     <aside className="w-64 bg-card border-r border-border flex flex-col shadow-lg">
-      <div className="p-6 border-b border-border">
-        <div className="flex items-center gap-2">
-          <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center shadow-md">
-            <Shield className="w-6 h-6 text-primary-foreground" />
-          </div>
-          <div>
-            <span className="font-display font-bold text-foreground block">GRIZZLY</span>
-            <span className="text-xs text-muted-foreground">Admin Portal</span>
-          </div>
-        </div>
+      <div className="p-4 border-b border-border">
+        <Logo size="sm" />
       </div>
 
       <nav className="flex-1 p-4">

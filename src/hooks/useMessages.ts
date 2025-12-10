@@ -203,7 +203,42 @@ export function useMessages() {
     }
   }, [selectedContact, fetchMessages]);
 
-  // Poll for new messages every 3 seconds
+  // Real-time subscription for messages
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('messages-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+        },
+        (payload) => {
+          const newMsg = payload.new as any;
+          
+          if (selectedContact) {
+            const isRelevant = selectedContact.type === 'group'
+              ? newMsg.group_id === selectedContact.id
+              : (newMsg.sender_id === selectedContact.id && newMsg.receiver_id === user.id) ||
+                (newMsg.sender_id === user.id && newMsg.receiver_id === selectedContact.id);
+
+            if (isRelevant) {
+              fetchMessages();
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, selectedContact, fetchMessages]);
+
+  // Poll for new messages every 3 seconds as fallback
   useEffect(() => {
     if (!selectedContact) return;
 

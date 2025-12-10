@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Shield, ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { Logo } from "@/components/Logo";
 import { z } from "zod";
 
 const loginSchema = z.object({
@@ -23,7 +24,6 @@ export default function Login() {
     password: "",
   });
 
-  // Redirect if already authenticated
   useEffect(() => {
     if (!loading && isAuthenticated && role) {
       if (role === 'admin') {
@@ -38,7 +38,6 @@ export default function Login() {
     e.preventDefault();
     setErrors({});
 
-    // Validate form
     const result = loginSchema.safeParse(formData);
     if (!result.success) {
       const fieldErrors: { email?: string; password?: string } = {};
@@ -51,13 +50,10 @@ export default function Login() {
     }
 
     setIsLoading(true);
-    
     const { error } = await signIn(formData.email, formData.password);
-    
     if (!error) {
-      // Navigation will happen via useEffect when role is fetched
+      // Navigation happens via useEffect
     }
-    
     setIsLoading(false);
   };
 
@@ -83,12 +79,7 @@ export default function Login() {
         </Link>
 
         <div className="bg-card rounded-2xl shadow-xl p-8">
-          <div className="flex items-center gap-2 mb-8">
-            <div className="w-10 h-10 bg-accent rounded-lg flex items-center justify-center">
-              <Shield className="w-6 h-6 text-accent-foreground" />
-            </div>
-            <span className="text-xl font-display font-bold text-foreground">GRIZZLY INTEGRATED</span>
-          </div>
+          <Logo size="md" className="mb-8" />
 
           <h1 className="text-2xl font-display font-bold text-foreground mb-2">Welcome back</h1>
           <p className="text-muted-foreground mb-6">Sign in to continue your preparation</p>
