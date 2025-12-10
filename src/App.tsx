@@ -16,6 +16,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import CreateTest from "./pages/admin/CreateTest";
 import TestsList from "./pages/admin/TestsList";
 import TestEdit from "./pages/admin/TestEdit";
+import QuestionBuilder from "./pages/admin/QuestionBuilder";
 import Students from "./pages/admin/Students";
 import Analytics from "./pages/admin/Analytics";
 import Results from "./pages/admin/Results";
@@ -56,6 +57,7 @@ const App = () => (
           <Route path="/admin/tests/new" element={<ProtectedRoute requiredRole="admin"><CreateTest /></ProtectedRoute>} />
           <Route path="/admin/tests/create" element={<ProtectedRoute requiredRole="admin"><CreateTest /></ProtectedRoute>} />
           <Route path="/admin/tests/:testId" element={<ProtectedRoute requiredRole="admin"><TestEdit /></ProtectedRoute>} />
+          <Route path="/admin/tests/:testId/questions" element={<ProtectedRoute requiredRole="admin"><QuestionBuilder /></ProtectedRoute>} />
           <Route path="/admin/students" element={<ProtectedRoute requiredRole="admin"><Students /></ProtectedRoute>} />
           <Route path="/admin/analytics" element={<ProtectedRoute requiredRole="admin"><Analytics /></ProtectedRoute>} />
           <Route path="/admin/results" element={<ProtectedRoute requiredRole="admin"><Results /></ProtectedRoute>} />
