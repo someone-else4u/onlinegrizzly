@@ -1,5 +1,4 @@
 import { 
-  Shield, 
   FileText, 
   BarChart3, 
   MessageSquare,
@@ -10,6 +9,7 @@ import {
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { Logo } from "@/components/Logo";
 
 const sidebarItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/student-dashboard' },
@@ -38,16 +38,8 @@ export function StudentSidebar() {
 
   return (
     <aside className="w-64 bg-card border-r border-border flex flex-col shadow-lg">
-      <div className="p-6 border-b border-border">
-        <div className="flex items-center gap-2">
-          <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center shadow-md">
-            <Shield className="w-6 h-6 text-primary-foreground" />
-          </div>
-          <div>
-            <span className="font-display font-bold text-foreground block">GRIZZLY</span>
-            <span className="text-xs text-muted-foreground">Student Portal</span>
-          </div>
-        </div>
+      <div className="p-4 border-b border-border">
+        <Logo size="sm" />
       </div>
 
       <nav className="flex-1 p-4">
@@ -72,8 +64,8 @@ export function StudentSidebar() {
 
       <div className="p-4 border-t border-border">
         <div className="flex items-center gap-3 px-4 py-2 mb-2">
-          <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
-            <span className="text-sm font-medium text-secondary-foreground">
+          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+            <span className="text-sm font-medium text-primary">
               {profile?.name?.charAt(0) || 'S'}
             </span>
           </div>

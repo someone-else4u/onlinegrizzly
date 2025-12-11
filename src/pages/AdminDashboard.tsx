@@ -20,6 +20,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdminDashboardData } from "@/hooks/useDashboardData";
 import { AdminSidebar } from "@/components/AdminSidebar";
+import { FloatingMessenger } from "@/components/FloatingMessenger";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -57,7 +58,7 @@ export default function AdminDashboard() {
                 <Bell className="w-5 h-5" />
               </Button>
               <Link to="/admin/tests/create">
-                <Button variant="accent">
+                <Button className="btn-hover">
                   <Plus className="w-4 h-4 mr-2" />
                   Create Test
                 </Button>
@@ -70,18 +71,20 @@ export default function AdminDashboard() {
           {/* Stats Grid */}
           <div className="grid grid-cols-4 gap-6 mb-8">
             {[
-              { label: 'Total Tests', value: stats.totalTests.toString(), change: '', color: 'bg-accent/10 text-accent' },
-              { label: 'Active Students', value: stats.totalStudents.toLocaleString(), change: '', color: 'bg-success/10 text-success' },
-              { label: 'Tests Today', value: stats.testsToday.toString(), change: '', color: 'bg-primary/10 text-primary' },
-              { label: 'Avg. Score', value: stats.avgScore > 0 ? `${stats.avgScore}%` : '-', change: '', color: 'bg-warning/10 text-warning' },
+              { label: 'Total Tests', value: stats.totalTests.toString(), color: 'bg-primary/10 text-primary', link: '/admin/tests' },
+              { label: 'Active Students', value: stats.totalStudents.toLocaleString(), color: 'bg-success/10 text-success', link: '/admin/students' },
+              { label: 'Tests Today', value: stats.testsToday.toString(), color: 'bg-secondary/10 text-secondary', link: '/admin/tests' },
+              { label: 'Avg. Score', value: stats.avgScore > 0 ? `${stats.avgScore}%` : '-', color: 'bg-warning/10 text-warning', link: '/admin/analytics' },
             ].map((stat, index) => (
-              <div key={index} className="bg-card rounded-xl border border-border p-6">
-                <div className={`w-10 h-10 rounded-lg ${stat.color} flex items-center justify-center mb-3`}>
-                  <BarChart3 className="w-5 h-5" />
+              <Link to={stat.link} key={index} className="block">
+                <div className="bg-card rounded-xl border border-border p-6 card-hover cursor-pointer">
+                  <div className={`w-10 h-10 rounded-lg ${stat.color} flex items-center justify-center mb-3`}>
+                    <BarChart3 className="w-5 h-5" />
+                  </div>
+                  <div className="text-2xl font-bold text-foreground mb-1">{stat.value}</div>
+                  <div className="text-sm text-muted-foreground">{stat.label}</div>
                 </div>
-                <div className="text-2xl font-bold text-foreground mb-1">{stat.value}</div>
-                <div className="text-sm text-muted-foreground">{stat.label}</div>
-              </div>
+              </Link>
             ))}
           </div>
 
@@ -91,9 +94,11 @@ export default function AdminDashboard() {
               <div className="p-6 border-b border-border">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-display font-semibold text-foreground">Recent Tests</h2>
-                  <Button variant="ghost" size="sm">
-                    View All <ChevronRight className="w-4 h-4 ml-1" />
-                  </Button>
+                  <Link to="/admin/tests">
+                    <Button variant="ghost" size="sm">
+                      View All <ChevronRight className="w-4 h-4 ml-1" />
+                    </Button>
+                  </Link>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="relative flex-1">
@@ -118,7 +123,7 @@ export default function AdminDashboard() {
                     <h3 className="text-lg font-medium text-foreground mb-2">No tests created yet</h3>
                     <p className="text-muted-foreground mb-4">Create your first test to get started</p>
                     <Link to="/admin/tests/create">
-                      <Button variant="accent">
+                      <Button className="btn-hover">
                         <Plus className="w-4 h-4 mr-2" />
                         Create Your First Test
                       </Button>
@@ -127,10 +132,10 @@ export default function AdminDashboard() {
                 ) : (
                   <div className="space-y-4">
                     {filteredTests.map((test) => (
-                      <div key={test.id} className="flex items-center justify-between p-4 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors">
+                      <div key={test.id} className="flex items-center justify-between p-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
                         <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
-                            <FileText className="w-5 h-5 text-accent" />
+                          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <FileText className="w-5 h-5 text-primary" />
                           </div>
                           <div>
                             <h4 className="font-medium text-foreground">{test.title}</h4>
@@ -157,15 +162,15 @@ export default function AdminDashboard() {
                           <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                             test.status === 'published' ? 'bg-success/10 text-success' :
                             test.status === 'draft' ? 'bg-warning/10 text-warning' :
-                            'bg-secondary text-secondary-foreground'
+                            'bg-muted text-muted-foreground'
                           }`}>
                             {test.status}
                           </span>
                           <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(`/admin/tests/${test.id}`)}>
                               <Eye className="w-4 h-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(`/admin/tests/${test.id}/questions`)}>
                               <Edit className="w-4 h-4" />
                             </Button>
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
@@ -185,9 +190,11 @@ export default function AdminDashboard() {
               <div className="p-6 border-b border-border">
                 <div className="flex items-center justify-between">
                   <h2 className="text-lg font-display font-semibold text-foreground">Top Performers</h2>
-                  <Button variant="ghost" size="sm">
-                    View All <ChevronRight className="w-4 h-4 ml-1" />
-                  </Button>
+                  <Link to="/admin/results">
+                    <Button variant="ghost" size="sm">
+                      View All <ChevronRight className="w-4 h-4 ml-1" />
+                    </Button>
+                  </Link>
                 </div>
               </div>
 
@@ -202,10 +209,10 @@ export default function AdminDashboard() {
                     {topPerformers.map((student) => (
                       <div key={student.userId} className="flex items-center gap-4">
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
-                          student.rank === 1 ? 'bg-accent text-accent-foreground' :
+                          student.rank === 1 ? 'bg-primary text-primary-foreground' :
                           student.rank === 2 ? 'bg-muted text-muted-foreground' :
                           student.rank === 3 ? 'bg-warning/20 text-warning' :
-                          'bg-secondary text-secondary-foreground'
+                          'bg-muted text-muted-foreground'
                         }`}>
                           {student.rank}
                         </div>
@@ -224,15 +231,20 @@ export default function AdminDashboard() {
                   </div>
                 )}
 
-                <Button variant="outline" className="w-full mt-6" disabled={topPerformers.length === 0}>
-                  <Download className="w-4 h-4 mr-2" />
-                  Export Leaderboard
-                </Button>
+                <Link to="/admin/results" className="block mt-6">
+                  <Button variant="outline" className="w-full" disabled={topPerformers.length === 0}>
+                    <Download className="w-4 h-4 mr-2" />
+                    Export Leaderboard
+                  </Button>
+                </Link>
               </div>
             </div>
           </div>
         </main>
       </div>
+
+      {/* Floating Messenger */}
+      <FloatingMessenger />
     </div>
   );
 }
