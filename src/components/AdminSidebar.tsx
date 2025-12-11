@@ -68,8 +68,8 @@ export function AdminSidebar() {
 
       <div className="p-4 border-t border-border">
         <div className="flex items-center gap-3 px-4 py-2 mb-2">
-          <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
-            <span className="text-sm font-medium text-secondary-foreground">
+          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+            <span className="text-sm font-medium text-primary">
               {profile?.name?.charAt(0) || 'A'}
             </span>
           </div>
