@@ -7,6 +7,8 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import StudentDashboard from "./pages/StudentDashboard";
 import TestPreview from "./pages/TestPreview";
 import ExamInterface from "./pages/ExamInterface";
@@ -25,6 +27,7 @@ import StudentTests from "./pages/student/Tests";
 import StudentResults from "./pages/student/Results";
 import StudentAnalytics from "./pages/student/Analytics";
 import StudentMessages from "./pages/student/Messages";
+import StudentSettings from "./pages/student/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,6 +42,8 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/admin/login" element={<AdminLogin />} />
           
           {/* Student Routes */}
@@ -47,6 +52,7 @@ const App = () => (
           <Route path="/student/results" element={<ProtectedRoute requiredRole="student"><StudentResults /></ProtectedRoute>} />
           <Route path="/student/analytics" element={<ProtectedRoute requiredRole="student"><StudentAnalytics /></ProtectedRoute>} />
           <Route path="/student/messages" element={<ProtectedRoute requiredRole="student"><StudentMessages /></ProtectedRoute>} />
+          <Route path="/student/settings" element={<ProtectedRoute requiredRole="student"><StudentSettings /></ProtectedRoute>} />
           <Route path="/test/:testId/pre" element={<ProtectedRoute requiredRole="student"><TestPreview /></ProtectedRoute>} />
           <Route path="/test/:testId/exam" element={<ProtectedRoute requiredRole="student"><ExamInterface /></ProtectedRoute>} />
           <Route path="/test/:testId/results" element={<ProtectedRoute requiredRole="student"><TestResults /></ProtectedRoute>} />

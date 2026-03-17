@@ -16,6 +16,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Logo } from "@/components/Logo";
 
+const SUBJECTS = ['physics', 'chemistry', 'mathematics', 'biology'] as const;
+
 interface Question {
   id?: string;
   question_text: string;
@@ -23,12 +25,17 @@ interface Question {
   option_b: string;
   option_c: string;
   option_d: string;
-  correct_option: "A" | "B" | "C" | "D";
+  correct_option: "A" | "B" | "C" | "D" | null;
   difficulty: "easy" | "medium" | "hard";
   topic: string;
+  subject: string;
   marks: number;
   negative_marks: number;
   question_image_url: string | null;
+  option_a_image: string | null;
+  option_b_image: string | null;
+  option_c_image: string | null;
+  option_d_image: string | null;
 }
 
 const emptyQuestion: Question = {
@@ -37,12 +44,17 @@ const emptyQuestion: Question = {
   option_b: "",
   option_c: "",
   option_d: "",
-  correct_option: "A",
+  correct_option: null,
   difficulty: "medium",
   topic: "",
+  subject: "physics",
   marks: 4,
   negative_marks: 1,
   question_image_url: null,
+  option_a_image: null,
+  option_b_image: null,
+  option_c_image: null,
+  option_d_image: null,
 };
 
 export default function QuestionBuilder() {
@@ -85,8 +97,13 @@ export default function QuestionBuilder() {
       } else if (questionsData && questionsData.length > 0) {
         setQuestions(questionsData.map(q => ({
           ...q,
-          correct_option: q.correct_option as "A" | "B" | "C" | "D",
+          correct_option: (q.correct_option as "A" | "B" | "C" | "D" | null) ?? null,
           difficulty: q.difficulty as "easy" | "medium" | "hard",
+          subject: (q as any).subject || 'physics',
+          option_a_image: (q as any).option_a_image || null,
+          option_b_image: (q as any).option_b_image || null,
+          option_c_image: (q as any).option_c_image || null,
+          option_d_image: (q as any).option_d_image || null,
         })));
       }
 
@@ -157,6 +174,7 @@ export default function QuestionBuilder() {
             correct_option: question.correct_option,
             difficulty: question.difficulty,
             topic: question.topic || null,
+            subject: question.subject,
             marks: question.marks,
             negative_marks: question.negative_marks,
             question_image_url: question.question_image_url,
@@ -179,6 +197,7 @@ export default function QuestionBuilder() {
             correct_option: question.correct_option,
             difficulty: question.difficulty,
             topic: question.topic || null,
+            subject: question.subject,
             marks: question.marks,
             negative_marks: question.negative_marks,
             question_image_url: question.question_image_url,
@@ -231,6 +250,7 @@ export default function QuestionBuilder() {
               correct_option: question.correct_option,
               difficulty: question.difficulty,
               topic: question.topic || null,
+              subject: question.subject,
               marks: question.marks,
               negative_marks: question.negative_marks,
             })
@@ -248,6 +268,7 @@ export default function QuestionBuilder() {
               correct_option: question.correct_option,
               difficulty: question.difficulty,
               topic: question.topic || null,
+              subject: question.subject,
               marks: question.marks,
               negative_marks: question.negative_marks,
             })
@@ -430,11 +451,21 @@ export default function QuestionBuilder() {
                   />
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-4 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">Subject/Topic</label>
+                    <label className="text-sm font-medium text-foreground mb-2 block">Subject</label>
+                    <select
+                      value={selectedQuestion.subject}
+                      onChange={(e) => updateQuestion(selectedIndex!, 'subject', e.target.value)}
+                      className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-ring"
+                    >
+                      {SUBJECTS.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">Topic</label>
                     <Input
-                      placeholder="e.g., Physics, Kinematics"
+                      placeholder="e.g., Kinematics"
                       value={selectedQuestion.topic}
                       onChange={(e) => updateQuestion(selectedIndex!, 'topic', e.target.value)}
                     />
@@ -493,7 +524,7 @@ export default function QuestionBuilder() {
                         }`}
                       >
                         <button
-                          onClick={() => updateQuestion(selectedIndex!, 'correct_option', option)}
+                          onClick={() => updateQuestion(selectedIndex!, 'correct_option', selectedQuestion.correct_option === option ? null : option)}
                           className={`w-8 h-8 rounded-full flex items-center justify-center font-medium transition-colors ${
                             isCorrect
                               ? 'bg-success text-success-foreground'
