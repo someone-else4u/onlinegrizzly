@@ -268,6 +268,7 @@ export default function QuestionBuilder() {
               correct_option: question.correct_option,
               difficulty: question.difficulty,
               topic: question.topic || null,
+              subject: question.subject,
               marks: question.marks,
               negative_marks: question.negative_marks,
             })
