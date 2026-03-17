@@ -9,6 +9,7 @@ import {
 import { StudentSidebar } from "@/components/StudentSidebar";
 import { useMessages } from "@/hooks/useMessages";
 import { useAuth } from "@/hooks/useAuth";
+import { AIChatPanel } from "@/components/AIChatPanel";
 
 export default function StudentMessages() {
   const { user } = useAuth();
