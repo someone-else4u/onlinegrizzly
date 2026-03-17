@@ -520,7 +520,7 @@ export default function QuestionBuilder() {
                         }`}
                       >
                         <button
-                          onClick={() => updateQuestion(selectedIndex!, 'correct_option', option)}
+                          onClick={() => updateQuestion(selectedIndex!, 'correct_option', selectedQuestion.correct_option === option ? null : option)}
                           className={`w-8 h-8 rounded-full flex items-center justify-center font-medium transition-colors ${
                             isCorrect
                               ? 'bg-success text-success-foreground'
