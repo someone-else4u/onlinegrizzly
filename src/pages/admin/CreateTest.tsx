@@ -7,45 +7,67 @@ import {
   Plus,
   Trash2,
   Save,
-  Loader2
+  Loader2,
+  CalendarIcon,
+  Upload,
+  Image as ImageIcon
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { z } from "zod";
+import { format } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+
+const SUBJECTS = ['physics', 'chemistry', 'mathematics', 'biology'] as const;
 
 const questionSchema = z.object({
-  question_text: z.string().min(5, "Question must be at least 5 characters"),
-  option_a: z.string().min(1, "Option A is required"),
-  option_b: z.string().min(1, "Option B is required"),
-  option_c: z.string().min(1, "Option C is required"),
-  option_d: z.string().min(1, "Option D is required"),
-  correct_option: z.enum(["A", "B", "C", "D"], { required_error: "Select correct answer" }),
+  question_text: z.string().min(1, "Question text or image is required"),
+  option_a: z.string(),
+  option_b: z.string(),
+  option_c: z.string(),
+  option_d: z.string(),
+  correct_option: z.enum(["A", "B", "C", "D"]).nullable(),
   difficulty: z.enum(["easy", "medium", "hard"]),
   topic: z.string().optional(),
+  subject: z.string().min(1, "Subject is required"),
 });
 
 interface QuestionForm {
   question_text: string;
+  question_image_url: string | null;
   option_a: string;
   option_b: string;
   option_c: string;
   option_d: string;
-  correct_option: "A" | "B" | "C" | "D";
+  option_a_image: string | null;
+  option_b_image: string | null;
+  option_c_image: string | null;
+  option_d_image: string | null;
+  correct_option: "A" | "B" | "C" | "D" | null;
   difficulty: "easy" | "medium" | "hard";
   topic: string;
+  subject: string;
 }
 
 const emptyQuestion: QuestionForm = {
   question_text: "",
+  question_image_url: null,
   option_a: "",
   option_b: "",
   option_c: "",
   option_d: "",
-  correct_option: "A",
+  option_a_image: null,
+  option_b_image: null,
+  option_c_image: null,
+  option_d_image: null,
+  correct_option: null,
   difficulty: "medium",
   topic: "",
+  subject: "physics",
 };
 
 export default function CreateTest() {
@@ -57,7 +79,13 @@ export default function CreateTest() {
   const [testType, setTestType] = useState("full");
   const [testDuration, setTestDuration] = useState(180);
   const [testDescription, setTestDescription] = useState("");
+  const [scheduleType, setScheduleType] = useState<"flexible" | "fixed">("flexible");
+  const [scheduledAt, setScheduledAt] = useState<Date | undefined>();
+  const [endsAt, setEndsAt] = useState<Date | undefined>();
+  const [scheduledTime, setScheduledTime] = useState("09:00");
+  const [endsTime, setEndsTime] = useState("18:00");
   const [questions, setQuestions] = useState<QuestionForm[]>([{ ...emptyQuestion }]);
+  const [uploadingImage, setUploadingImage] = useState<string | null>(null);
 
   if (authLoading) {
     return (
@@ -73,56 +101,56 @@ export default function CreateTest() {
         <div className="text-center">
           <h2 className="text-xl font-semibold text-foreground mb-2">Access Denied</h2>
           <p className="text-muted-foreground mb-4">You need admin privileges to access this page.</p>
-          <Link to="/">
-            <Button variant="accent">Go Home</Button>
-          </Link>
+          <Link to="/"><Button variant="accent">Go Home</Button></Link>
         </div>
       </div>
     );
   }
 
-  const addQuestion = () => {
-    setQuestions([...questions, { ...emptyQuestion }]);
-  };
-
+  const addQuestion = () => setQuestions([...questions, { ...emptyQuestion }]);
   const removeQuestion = (index: number) => {
-    if (questions.length > 1) {
-      setQuestions(questions.filter((_, i) => i !== index));
-    }
+    if (questions.length > 1) setQuestions(questions.filter((_, i) => i !== index));
   };
-
-  const updateQuestion = (index: number, field: keyof QuestionForm, value: string) => {
+  const updateQuestion = (index: number, field: keyof QuestionForm, value: any) => {
     const updated = [...questions];
     updated[index] = { ...updated[index], [field]: value };
     setQuestions(updated);
   };
 
+  const uploadImage = async (file: File, path: string): Promise<string | null> => {
+    const ext = file.name.split('.').pop();
+    const fileName = `${path}/${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from('question-images').upload(fileName, file);
+    if (error) { toast.error('Failed to upload image'); return null; }
+    const { data } = supabase.storage.from('question-images').getPublicUrl(fileName);
+    return data.publicUrl;
+  };
+
+  const handleImageUpload = async (index: number, field: keyof QuestionForm, file: File) => {
+    const key = `${index}-${field}`;
+    setUploadingImage(key);
+    const url = await uploadImage(file, `test-new/q${index}`);
+    if (url) updateQuestion(index, field, url);
+    setUploadingImage(null);
+  };
+
+  const combineDateTime = (date: Date | undefined, time: string): string | null => {
+    if (!date) return null;
+    const [h, m] = time.split(':').map(Number);
+    const combined = new Date(date);
+    combined.setHours(h, m, 0, 0);
+    return combined.toISOString();
+  };
+
   const handleSave = async (publish: boolean) => {
-    if (!testTitle.trim()) {
-      toast.error("Please enter a test title");
-      return;
-    }
-
-    if (questions.length === 0) {
-      toast.error("Please add at least one question");
-      return;
-    }
-
-    // Validate all questions
-    for (let i = 0; i < questions.length; i++) {
-      try {
-        questionSchema.parse(questions[i]);
-      } catch (err: any) {
-        const errors = err.errors || [];
-        toast.error(`Question ${i + 1}: ${errors[0]?.message || 'Invalid question'}`);
-        return;
-      }
+    if (!testTitle.trim()) { toast.error("Please enter a test title"); return; }
+    if (questions.length === 0) { toast.error("Please add at least one question"); return; }
+    if (publish && scheduledAt && endsAt && new Date(combineDateTime(endsAt, endsTime)!) <= new Date(combineDateTime(scheduledAt, scheduledTime)!)) {
+      toast.error("End time must be after start time"); return;
     }
 
     setSaving(true);
-
     try {
-      // Create test
       const { data: testData, error: testError } = await supabase
         .from('tests')
         .insert({
@@ -133,29 +161,34 @@ export default function CreateTest() {
           total_questions: questions.length,
           status: publish ? 'published' : 'draft',
           created_by: user?.id,
+          schedule_type: scheduleType,
+          scheduled_at: combineDateTime(scheduledAt, scheduledTime),
+          ends_at: combineDateTime(endsAt, endsTime),
         })
         .select()
         .single();
 
       if (testError) throw testError;
 
-      // Create questions
       const questionsToInsert = questions.map(q => ({
         test_id: testData.id,
-        question_text: q.question_text,
-        option_a: q.option_a,
-        option_b: q.option_b,
-        option_c: q.option_c,
-        option_d: q.option_d,
+        question_text: q.question_text || 'Image Question',
+        option_a: q.option_a || 'See image',
+        option_b: q.option_b || 'See image',
+        option_c: q.option_c || 'See image',
+        option_d: q.option_d || 'See image',
         correct_option: q.correct_option,
         difficulty: q.difficulty,
         topic: q.topic || null,
+        subject: q.subject,
+        question_image_url: q.question_image_url,
+        option_a_image: q.option_a_image,
+        option_b_image: q.option_b_image,
+        option_c_image: q.option_c_image,
+        option_d_image: q.option_d_image,
       }));
 
-      const { error: questionsError } = await supabase
-        .from('questions')
-        .insert(questionsToInsert);
-
+      const { error: questionsError } = await supabase.from('questions').insert(questionsToInsert);
       if (questionsError) throw questionsError;
 
       toast.success(publish ? 'Test published successfully!' : 'Test saved as draft!');
@@ -168,15 +201,39 @@ export default function CreateTest() {
     }
   };
 
+  const ImageUploadButton = ({ index, field, currentUrl, label }: { index: number; field: keyof QuestionForm; currentUrl: string | null; label: string }) => {
+    const key = `${index}-${field}`;
+    return (
+      <div className="relative">
+        {currentUrl ? (
+          <div className="relative group">
+            <img src={currentUrl} alt={label} className="w-full h-20 object-cover rounded-md border border-border" />
+            <button
+              onClick={() => updateQuestion(index, field, null)}
+              className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+            >×</button>
+          </div>
+        ) : (
+          <label className="flex items-center gap-2 p-2 border border-dashed border-border rounded-md cursor-pointer hover:bg-muted transition-colors text-xs text-muted-foreground">
+            {uploadingImage === key ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+            {label}
+            <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleImageUpload(index, field, file);
+            }} />
+          </label>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="sticky top-0 z-50 bg-card border-b border-border">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link to="/admin-dashboard" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
-              <ArrowLeft className="w-4 h-4" />
-              Back
+              <ArrowLeft className="w-4 h-4" /> Back
             </Link>
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-accent rounded-lg flex items-center justify-center">
@@ -205,19 +262,11 @@ export default function CreateTest() {
           <div className="grid md:grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium text-foreground mb-2 block">Test Title *</label>
-              <Input
-                placeholder="e.g., JEE Main Mock Test #1"
-                value={testTitle}
-                onChange={(e) => setTestTitle(e.target.value)}
-              />
+              <Input placeholder="e.g., JEE Main Mock Test #1" value={testTitle} onChange={(e) => setTestTitle(e.target.value)} />
             </div>
             <div>
               <label className="text-sm font-medium text-foreground mb-2 block">Test Type</label>
-              <select
-                value={testType}
-                onChange={(e) => setTestType(e.target.value)}
-                className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
-              >
+              <select value={testType} onChange={(e) => setTestType(e.target.value)} className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm">
                 <option value="full">Full Length</option>
                 <option value="chapter">Chapter Test</option>
                 <option value="practice">Practice Test</option>
@@ -226,118 +275,94 @@ export default function CreateTest() {
             </div>
             <div>
               <label className="text-sm font-medium text-foreground mb-2 block">Duration (minutes)</label>
-              <Input
-                type="number"
-                min={1}
-                value={testDuration}
-                onChange={(e) => setTestDuration(parseInt(e.target.value) || 60)}
-              />
+              <Input type="number" min={1} value={testDuration} onChange={(e) => setTestDuration(parseInt(e.target.value) || 60)} />
             </div>
             <div>
               <label className="text-sm font-medium text-foreground mb-2 block">Description (optional)</label>
-              <Input
-                placeholder="Brief description of the test"
-                value={testDescription}
-                onChange={(e) => setTestDescription(e.target.value)}
-              />
+              <Input placeholder="Brief description of the test" value={testDescription} onChange={(e) => setTestDescription(e.target.value)} />
             </div>
+          </div>
+        </div>
+
+        {/* Scheduling */}
+        <div className="bg-card rounded-xl border border-border p-6 mb-8">
+          <h2 className="text-lg font-display font-semibold text-foreground mb-4">Test Schedule</h2>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">Schedule Type</label>
+              <select value={scheduleType} onChange={(e) => setScheduleType(e.target.value as any)} className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm">
+                <option value="flexible">Flexible (students can attempt anytime within window)</option>
+                <option value="fixed">Fixed (all students must start at exact time)</option>
+              </select>
+            </div>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-foreground mb-2 block">Opens On</label>
+                <div className="flex gap-2">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className={cn("flex-1 justify-start text-left font-normal", !scheduledAt && "text-muted-foreground")}>
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {scheduledAt ? format(scheduledAt, "PPP") : "Pick a date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar mode="single" selected={scheduledAt} onSelect={setScheduledAt} initialFocus className="p-3 pointer-events-auto" />
+                    </PopoverContent>
+                  </Popover>
+                  <Input type="time" value={scheduledTime} onChange={(e) => setScheduledTime(e.target.value)} className="w-32" />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground mb-2 block">Closes On</label>
+                <div className="flex gap-2">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className={cn("flex-1 justify-start text-left font-normal", !endsAt && "text-muted-foreground")}>
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {endsAt ? format(endsAt, "PPP") : "Pick a date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar mode="single" selected={endsAt} onSelect={setEndsAt} initialFocus className="p-3 pointer-events-auto" />
+                    </PopoverContent>
+                  </Popover>
+                  <Input type="time" value={endsTime} onChange={(e) => setEndsTime(e.target.value)} className="w-32" />
+                </div>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">Leave dates empty if the test should be available indefinitely once published.</p>
           </div>
         </div>
 
         {/* Questions */}
         <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-display font-semibold text-foreground">
-              Questions ({questions.length})
-            </h2>
-            <Button variant="outline" onClick={addQuestion}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Question
-            </Button>
+            <h2 className="text-lg font-display font-semibold text-foreground">Questions ({questions.length})</h2>
+            <Button variant="outline" onClick={addQuestion}><Plus className="w-4 h-4 mr-2" /> Add Question</Button>
           </div>
 
           {questions.map((q, index) => (
             <div key={index} className="bg-card rounded-xl border border-border p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-medium text-foreground">Question {index + 1}</h3>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-destructive"
-                  onClick={() => removeQuestion(index)}
-                  disabled={questions.length === 1}
-                >
+                <Button variant="ghost" size="icon" className="text-destructive" onClick={() => removeQuestion(index)} disabled={questions.length === 1}>
                   <Trash2 className="w-4 h-4" />
                 </Button>
               </div>
 
               <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium text-foreground mb-2 block">Question Text *</label>
-                  <textarea
-                    className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    placeholder="Enter your question here..."
-                    value={q.question_text}
-                    onChange={(e) => updateQuestion(index, 'question_text', e.target.value)}
-                  />
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">Option A *</label>
-                    <Input
-                      placeholder="Option A"
-                      value={q.option_a}
-                      onChange={(e) => updateQuestion(index, 'option_a', e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">Option B *</label>
-                    <Input
-                      placeholder="Option B"
-                      value={q.option_b}
-                      onChange={(e) => updateQuestion(index, 'option_b', e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">Option C *</label>
-                    <Input
-                      placeholder="Option C"
-                      value={q.option_c}
-                      onChange={(e) => updateQuestion(index, 'option_c', e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">Option D *</label>
-                    <Input
-                      placeholder="Option D"
-                      value={q.option_d}
-                      onChange={(e) => updateQuestion(index, 'option_d', e.target.value)}
-                    />
-                  </div>
-                </div>
-
+                {/* Subject & Difficulty */}
                 <div className="grid md:grid-cols-3 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">Correct Answer *</label>
-                    <select
-                      value={q.correct_option}
-                      onChange={(e) => updateQuestion(index, 'correct_option', e.target.value)}
-                      className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    >
-                      <option value="A">Option A</option>
-                      <option value="B">Option B</option>
-                      <option value="C">Option C</option>
-                      <option value="D">Option D</option>
+                    <label className="text-sm font-medium text-foreground mb-2 block">Subject *</label>
+                    <select value={q.subject} onChange={(e) => updateQuestion(index, 'subject', e.target.value)} className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm">
+                      {SUBJECTS.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-foreground mb-2 block">Difficulty</label>
-                    <select
-                      value={q.difficulty}
-                      onChange={(e) => updateQuestion(index, 'difficulty', e.target.value)}
-                      className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    >
+                    <select value={q.difficulty} onChange={(e) => updateQuestion(index, 'difficulty', e.target.value)} className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm">
                       <option value="easy">Easy</option>
                       <option value="medium">Medium</option>
                       <option value="hard">Hard</option>
@@ -345,20 +370,61 @@ export default function CreateTest() {
                   </div>
                   <div>
                     <label className="text-sm font-medium text-foreground mb-2 block">Topic</label>
-                    <Input
-                      placeholder="e.g., Physics, Chemistry"
-                      value={q.topic}
-                      onChange={(e) => updateQuestion(index, 'topic', e.target.value)}
-                    />
+                    <Input placeholder="e.g., Kinematics" value={q.topic} onChange={(e) => updateQuestion(index, 'topic', e.target.value)} />
                   </div>
+                </div>
+
+                {/* Question Text + Image */}
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">Question Text</label>
+                  <textarea
+                    className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    placeholder="Enter your question here (or upload image below)..."
+                    value={q.question_text}
+                    onChange={(e) => updateQuestion(index, 'question_text', e.target.value)}
+                  />
+                  <div className="mt-2">
+                    <ImageUploadButton index={index} field="question_image_url" currentUrl={q.question_image_url} label="Upload question image" />
+                  </div>
+                </div>
+
+                {/* Options with image support */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  {(['a', 'b', 'c', 'd'] as const).map((opt) => (
+                    <div key={opt}>
+                      <label className="text-sm font-medium text-foreground mb-2 block">Option {opt.toUpperCase()}</label>
+                      <Input
+                        placeholder={`Option ${opt.toUpperCase()} (text)`}
+                        value={q[`option_${opt}` as keyof QuestionForm] as string}
+                        onChange={(e) => updateQuestion(index, `option_${opt}` as keyof QuestionForm, e.target.value)}
+                        className="mb-2"
+                      />
+                      <ImageUploadButton index={index} field={`option_${opt}_image` as keyof QuestionForm} currentUrl={q[`option_${opt}_image` as keyof QuestionForm] as string | null} label={`Upload option ${opt.toUpperCase()} image`} />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Correct Answer (optional - can be set later) */}
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">Correct Answer <span className="text-muted-foreground">(can be set later)</span></label>
+                  <select
+                    value={q.correct_option || ''}
+                    onChange={(e) => updateQuestion(index, 'correct_option', e.target.value || null)}
+                    className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="">Not set yet</option>
+                    <option value="A">Option A</option>
+                    <option value="B">Option B</option>
+                    <option value="C">Option C</option>
+                    <option value="D">Option D</option>
+                  </select>
                 </div>
               </div>
             </div>
           ))}
 
           <Button variant="outline" className="w-full" onClick={addQuestion}>
-            <Plus className="w-4 h-4 mr-2" />
-            Add Another Question
+            <Plus className="w-4 h-4 mr-2" /> Add Another Question
           </Button>
         </div>
       </main>

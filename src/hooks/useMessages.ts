@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -19,8 +19,6 @@ interface ChatContact {
   name: string;
   email?: string;
   type: 'user' | 'group';
-  lastMessage?: string;
-  lastMessageTime?: string;
 }
 
 export function useMessages() {
@@ -29,93 +27,43 @@ export function useMessages() {
   const [contacts, setContacts] = useState<ChatContact[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedContact, setSelectedContact] = useState<ChatContact | null>(null);
+  const profileCache = useRef<Record<string, string>>({});
+
+  const getProfileName = async (userId: string): Promise<string> => {
+    if (profileCache.current[userId]) return profileCache.current[userId];
+    const { data } = await supabase.from('profiles').select('name').eq('user_id', userId).single();
+    const name = data?.name || 'Unknown';
+    profileCache.current[userId] = name;
+    return name;
+  };
 
   const fetchContacts = useCallback(async () => {
     if (!user) return;
-
     try {
       if (role === 'admin') {
-        // Admins see all students
-        const { data: students, error } = await supabase
-          .from('profiles')
-          .select('user_id, name, email')
-          .order('name');
-
-        if (error) throw error;
-
-        // Also fetch groups
-        const { data: groups } = await supabase
-          .from('chat_groups')
-          .select('id, name, description');
-
-        const studentContacts: ChatContact[] = (students || []).map(s => ({
-          id: s.user_id,
-          name: s.name,
-          email: s.email,
-          type: 'user' as const
-        }));
-
-        const groupContacts: ChatContact[] = (groups || []).map(g => ({
-          id: g.id,
-          name: g.name,
-          type: 'group' as const
-        }));
-
+        const [{ data: students }, { data: groups }] = await Promise.all([
+          supabase.from('profiles').select('user_id, name, email').order('name'),
+          supabase.from('chat_groups').select('id, name, description'),
+        ]);
+        const studentContacts: ChatContact[] = (students || []).map(s => ({ id: s.user_id, name: s.name, email: s.email, type: 'user' }));
+        const groupContacts: ChatContact[] = (groups || []).map(g => ({ id: g.id, name: g.name, type: 'group' }));
         setContacts([...studentContacts, ...groupContacts]);
       } else {
-        // Students see admin contact and their groups
-        const { data: admins } = await supabase
-          .from('user_roles')
-          .select('user_id')
-          .eq('role', 'admin');
-
+        const { data: admins } = await supabase.from('user_roles').select('user_id').eq('role', 'admin');
         const adminContacts: ChatContact[] = [];
-
-        if (admins && admins.length > 0) {
-          for (const admin of admins) {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('name, email')
-              .eq('user_id', admin.user_id)
-              .single();
-
-            if (profile) {
-              adminContacts.push({
-                id: admin.user_id,
-                name: profile.name || 'Admin',
-                email: profile.email,
-                type: 'user'
-              });
-            }
-          }
+        if (admins) {
+          const profilePromises = admins.map(async (admin) => {
+            const name = await getProfileName(admin.user_id);
+            return { id: admin.user_id, name, type: 'user' as const };
+          });
+          adminContacts.push(...await Promise.all(profilePromises));
         }
-
-        // Fetch groups the student belongs to
-        const { data: memberGroups } = await supabase
-          .from('group_members')
-          .select('group_id')
-          .eq('user_id', user.id);
-
+        const { data: memberGroups } = await supabase.from('group_members').select('group_id').eq('user_id', user.id);
         const groupContacts: ChatContact[] = [];
-
         if (memberGroups && memberGroups.length > 0) {
-          const groupIds = memberGroups.map(m => m.group_id);
-          const { data: groups } = await supabase
-            .from('chat_groups')
-            .select('id, name')
-            .in('id', groupIds);
-
-          if (groups) {
-            groups.forEach(g => {
-              groupContacts.push({
-                id: g.id,
-                name: g.name,
-                type: 'group'
-              });
-            });
-          }
+          const { data: groups } = await supabase.from('chat_groups').select('id, name').in('id', memberGroups.map(m => m.group_id));
+          if (groups) groups.forEach(g => groupContacts.push({ id: g.id, name: g.name, type: 'group' }));
         }
-
         setContacts([...adminContacts, ...groupContacts]);
       }
     } catch (error) {
@@ -125,40 +73,25 @@ export function useMessages() {
 
   const fetchMessages = useCallback(async () => {
     if (!user || !selectedContact) return;
-
     try {
-      let query = supabase
-        .from('messages')
-        .select('*')
-        .order('created_at', { ascending: true });
-
+      let query = supabase.from('messages').select('*').order('created_at', { ascending: true });
       if (selectedContact.type === 'group') {
         query = query.eq('group_id', selectedContact.id).eq('is_group', true);
       } else {
-        query = query
-          .eq('is_group', false)
-          .or(`and(sender_id.eq.${user.id},receiver_id.eq.${selectedContact.id}),and(sender_id.eq.${selectedContact.id},receiver_id.eq.${user.id})`);
+        query = query.eq('is_group', false).or(
+          `and(sender_id.eq.${user.id},receiver_id.eq.${selectedContact.id}),and(sender_id.eq.${selectedContact.id},receiver_id.eq.${user.id})`
+        );
       }
-
       const { data, error } = await query;
-
       if (error) throw error;
 
-      // Fetch sender names
-      const messagesWithNames: Message[] = [];
-      for (const msg of data || []) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('name')
-          .eq('user_id', msg.sender_id)
-          .single();
+      const namesNeeded = [...new Set((data || []).map(m => m.sender_id))];
+      await Promise.all(namesNeeded.map(id => getProfileName(id)));
 
-        messagesWithNames.push({
-          ...msg,
-          sender_name: profile?.name || 'Unknown'
-        });
-      }
-
+      const messagesWithNames = (data || []).map(msg => ({
+        ...msg,
+        sender_name: profileCache.current[msg.sender_id] || 'Unknown',
+      }));
       setMessages(messagesWithNames);
     } catch (error) {
       console.error('Error fetching messages:', error);
@@ -167,92 +100,57 @@ export function useMessages() {
 
   const sendMessage = async (text: string) => {
     if (!user || !selectedContact || !text.trim() || !role) return;
-
     try {
-      const messageData = {
+      const { error } = await supabase.from('messages').insert({
         sender_id: user.id,
         sender_role: role,
         text: text.trim(),
         is_group: selectedContact.type === 'group',
         receiver_id: selectedContact.type === 'user' ? selectedContact.id : null,
-        group_id: selectedContact.type === 'group' ? selectedContact.id : null
-      };
-
-      const { error } = await supabase
-        .from('messages')
-        .insert(messageData);
-
+        group_id: selectedContact.type === 'group' ? selectedContact.id : null,
+      });
       if (error) throw error;
-
-      // Refresh messages
-      await fetchMessages();
     } catch (error) {
       console.error('Error sending message:', error);
     }
   };
 
-  // Initial fetch
   useEffect(() => {
     fetchContacts().finally(() => setLoading(false));
   }, [fetchContacts]);
 
-  // Fetch messages when contact changes
   useEffect(() => {
-    if (selectedContact) {
-      fetchMessages();
-    }
+    if (selectedContact) fetchMessages();
   }, [selectedContact, fetchMessages]);
 
-  // Real-time subscription for messages
+  // Real-time subscription
   useEffect(() => {
     if (!user) return;
 
     const channel = supabase
       .channel('messages-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-        },
-        (payload) => {
-          const newMsg = payload.new as any;
-          
-          if (selectedContact) {
-            const isRelevant = selectedContact.type === 'group'
-              ? newMsg.group_id === selectedContact.id
-              : (newMsg.sender_id === selectedContact.id && newMsg.receiver_id === user.id) ||
-                (newMsg.sender_id === user.id && newMsg.receiver_id === selectedContact.id);
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, async (payload) => {
+        const newMsg = payload.new as any;
+        if (!selectedContact) return;
 
-            if (isRelevant) {
-              fetchMessages();
-            }
-          }
+        const isRelevant = selectedContact.type === 'group'
+          ? newMsg.group_id === selectedContact.id
+          : (newMsg.sender_id === selectedContact.id && newMsg.receiver_id === user.id) ||
+            (newMsg.sender_id === user.id && newMsg.receiver_id === selectedContact.id);
+
+        if (isRelevant) {
+          const senderName = await getProfileName(newMsg.sender_id);
+          setMessages(prev => [...prev, { ...newMsg, sender_name: senderName }]);
         }
-      )
+      })
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, selectedContact, fetchMessages]);
-
-  // Poll for new messages every 3 seconds as fallback
-  useEffect(() => {
-    if (!selectedContact) return;
-
-    const interval = setInterval(fetchMessages, 3000);
-    return () => clearInterval(interval);
-  }, [selectedContact, fetchMessages]);
+    return () => { supabase.removeChannel(channel); };
+  }, [user, selectedContact]);
 
   return {
-    messages,
-    contacts,
-    loading,
-    selectedContact,
-    setSelectedContact,
-    sendMessage,
-    refetch: fetchMessages
+    messages, contacts, loading,
+    selectedContact, setSelectedContact,
+    sendMessage, refetch: fetchMessages,
   };
 }
