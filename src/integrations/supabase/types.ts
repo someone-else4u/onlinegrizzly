@@ -140,50 +140,65 @@ export type Database = {
       }
       questions: {
         Row: {
-          correct_option: string
+          correct_option: string | null
           created_at: string
           difficulty: string
           id: string
           marks: number
           negative_marks: number
           option_a: string
+          option_a_image: string | null
           option_b: string
+          option_b_image: string | null
           option_c: string
+          option_c_image: string | null
           option_d: string
+          option_d_image: string | null
           question_image_url: string | null
           question_text: string
+          subject: string
           test_id: string
           topic: string | null
         }
         Insert: {
-          correct_option: string
+          correct_option?: string | null
           created_at?: string
           difficulty?: string
           id?: string
           marks?: number
           negative_marks?: number
           option_a: string
+          option_a_image?: string | null
           option_b: string
+          option_b_image?: string | null
           option_c: string
+          option_c_image?: string | null
           option_d: string
+          option_d_image?: string | null
           question_image_url?: string | null
           question_text: string
+          subject?: string
           test_id: string
           topic?: string | null
         }
         Update: {
-          correct_option?: string
+          correct_option?: string | null
           created_at?: string
           difficulty?: string
           id?: string
           marks?: number
           negative_marks?: number
           option_a?: string
+          option_a_image?: string | null
           option_b?: string
+          option_b_image?: string | null
           option_c?: string
+          option_c_image?: string | null
           option_d?: string
+          option_d_image?: string | null
           question_image_url?: string | null
           question_text?: string
+          subject?: string
           test_id?: string
           topic?: string | null
         }
@@ -250,7 +265,10 @@ export type Database = {
           created_by: string | null
           description: string | null
           duration: number
+          ends_at: string | null
           id: string
+          schedule_type: string
+          scheduled_at: string | null
           status: string
           title: string
           total_questions: number
@@ -262,7 +280,10 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           duration?: number
+          ends_at?: string | null
           id?: string
+          schedule_type?: string
+          scheduled_at?: string | null
           status?: string
           title: string
           total_questions?: number
@@ -274,7 +295,10 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           duration?: number
+          ends_at?: string | null
           id?: string
+          schedule_type?: string
+          scheduled_at?: string | null
           status?: string
           title?: string
           total_questions?: number
