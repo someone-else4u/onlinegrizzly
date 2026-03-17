@@ -203,6 +203,7 @@ export default function StudentMessages() {
           )}
         </div>
       </div>
+      <AIChatPanel />
     </div>
   );
 }
