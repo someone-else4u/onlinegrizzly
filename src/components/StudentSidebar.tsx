@@ -4,7 +4,8 @@ import {
   MessageSquare,
   Trophy,
   LogOut,
-  LayoutDashboard
+  LayoutDashboard,
+  Settings
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ const sidebarItems = [
   { icon: Trophy, label: 'Results', path: '/student/results' },
   { icon: BarChart3, label: 'Analytics', path: '/student/analytics' },
   { icon: MessageSquare, label: 'Messages', path: '/student/messages' },
+  { icon: Settings, label: 'Settings', path: '/student/settings' },
 ];
 
 export function StudentSidebar() {

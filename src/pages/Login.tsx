@@ -125,7 +125,7 @@ export default function Login() {
                 <input type="checkbox" className="rounded border-input" />
                 <span className="text-muted-foreground">Remember me</span>
               </label>
-              <a href="#" className="text-accent hover:underline">Forgot password?</a>
+              <Link to="/forgot-password" className="text-accent hover:underline">Forgot password?</Link>
             </div>
 
             <Button type="submit" variant="accent" className="w-full" disabled={isLoading}>
