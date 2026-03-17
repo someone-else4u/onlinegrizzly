@@ -16,6 +16,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Logo } from "@/components/Logo";
 
+const SUBJECTS = ['physics', 'chemistry', 'mathematics', 'biology'] as const;
+
 interface Question {
   id?: string;
   question_text: string;
@@ -23,12 +25,17 @@ interface Question {
   option_b: string;
   option_c: string;
   option_d: string;
-  correct_option: "A" | "B" | "C" | "D";
+  correct_option: "A" | "B" | "C" | "D" | null;
   difficulty: "easy" | "medium" | "hard";
   topic: string;
+  subject: string;
   marks: number;
   negative_marks: number;
   question_image_url: string | null;
+  option_a_image: string | null;
+  option_b_image: string | null;
+  option_c_image: string | null;
+  option_d_image: string | null;
 }
 
 const emptyQuestion: Question = {
@@ -37,12 +44,17 @@ const emptyQuestion: Question = {
   option_b: "",
   option_c: "",
   option_d: "",
-  correct_option: "A",
+  correct_option: null,
   difficulty: "medium",
   topic: "",
+  subject: "physics",
   marks: 4,
   negative_marks: 1,
   question_image_url: null,
+  option_a_image: null,
+  option_b_image: null,
+  option_c_image: null,
+  option_d_image: null,
 };
 
 export default function QuestionBuilder() {
