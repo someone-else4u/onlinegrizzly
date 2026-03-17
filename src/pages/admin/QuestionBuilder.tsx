@@ -447,11 +447,21 @@ export default function QuestionBuilder() {
                   />
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-4 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">Subject/Topic</label>
+                    <label className="text-sm font-medium text-foreground mb-2 block">Subject</label>
+                    <select
+                      value={selectedQuestion.subject}
+                      onChange={(e) => updateQuestion(selectedIndex!, 'subject', e.target.value)}
+                      className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-ring"
+                    >
+                      {SUBJECTS.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">Topic</label>
                     <Input
-                      placeholder="e.g., Physics, Kinematics"
+                      placeholder="e.g., Kinematics"
                       value={selectedQuestion.topic}
                       onChange={(e) => updateQuestion(selectedIndex!, 'topic', e.target.value)}
                     />
