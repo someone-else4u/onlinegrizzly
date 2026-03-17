@@ -97,8 +97,13 @@ export default function QuestionBuilder() {
       } else if (questionsData && questionsData.length > 0) {
         setQuestions(questionsData.map(q => ({
           ...q,
-          correct_option: q.correct_option as "A" | "B" | "C" | "D",
+          correct_option: (q.correct_option as "A" | "B" | "C" | "D" | null) ?? null,
           difficulty: q.difficulty as "easy" | "medium" | "hard",
+          subject: (q as any).subject || 'physics',
+          option_a_image: (q as any).option_a_image || null,
+          option_b_image: (q as any).option_b_image || null,
+          option_c_image: (q as any).option_c_image || null,
+          option_d_image: (q as any).option_d_image || null,
         })));
       }
 
