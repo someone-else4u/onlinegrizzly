@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { 
   Shield, 
   ArrowLeft,
@@ -10,7 +11,9 @@ import {
   Loader2,
   CalendarIcon,
   Upload,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Sparkles,
+  Wand2
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -86,6 +89,9 @@ export default function CreateTest() {
   const [endsTime, setEndsTime] = useState("18:00");
   const [questions, setQuestions] = useState<QuestionForm[]>([{ ...emptyQuestion }]);
   const [uploadingImage, setUploadingImage] = useState<string | null>(null);
+  const [aiText, setAiText] = useState("");
+  const [aiImageBase64, setAiImageBase64] = useState<string | null>(null);
+  const [aiParsing, setAiParsing] = useState(false);
 
   if (authLoading) {
     return (
@@ -140,6 +146,53 @@ export default function CreateTest() {
     const combined = new Date(date);
     combined.setHours(h, m, 0, 0);
     return combined.toISOString();
+  };
+
+  const handleAiParse = async () => {
+    if (!aiText.trim() && !aiImageBase64) {
+      toast.error("Please enter text or upload an image for AI to parse");
+      return;
+    }
+    setAiParsing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('parse-questions', {
+        body: { text: aiText.trim() || undefined, imageBase64: aiImageBase64 || undefined },
+      });
+      if (error) throw error;
+      if (data?.questions?.length > 0) {
+        const parsed: QuestionForm[] = data.questions.map((q: any) => ({
+          ...emptyQuestion,
+          question_text: q.question_text || "",
+          option_a: q.option_a || "",
+          option_b: q.option_b || "",
+          option_c: q.option_c || "",
+          option_d: q.option_d || "",
+          correct_option: ["A","B","C","D"].includes(q.correct_option) ? q.correct_option : null,
+          subject: q.subject || "physics",
+          difficulty: q.difficulty || "medium",
+          topic: q.topic || "",
+        }));
+        setQuestions(prev => [...prev, ...parsed]);
+        setAiText("");
+        setAiImageBase64(null);
+        toast.success(`AI extracted ${parsed.length} question(s)!`);
+      } else {
+        toast.error("AI couldn't extract any questions from the input");
+      }
+    } catch (e: any) {
+      console.error("AI parse error:", e);
+      toast.error(e.message || "Failed to parse questions with AI");
+    } finally {
+      setAiParsing(false);
+    }
+  };
+
+  const handleAiImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setAiImageBase64(reader.result as string);
+    reader.readAsDataURL(file);
   };
 
   const handleSave = async (publish: boolean) => {
@@ -332,6 +385,41 @@ export default function CreateTest() {
               </div>
             </div>
             <p className="text-xs text-muted-foreground">Leave dates empty if the test should be available indefinitely once published.</p>
+          </div>
+        </div>
+
+        {/* AI Question Parser */}
+        <div className="bg-card rounded-xl border-2 border-dashed border-primary/30 p-6 mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <Wand2 className="w-5 h-5 text-primary" />
+            <h2 className="text-lg font-display font-semibold text-foreground">AI Question Parser</h2>
+            <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">Beta</span>
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            Paste question text or upload an image with questions — AI will extract and format them as MCQs automatically.
+          </p>
+          <div className="space-y-4">
+            <Textarea
+              placeholder="Paste your questions here... e.g.&#10;1. What is Newton's first law?&#10;A) Law of inertia B) F=ma C) Action-reaction D) Gravity&#10;Answer: A"
+              value={aiText}
+              onChange={(e) => setAiText(e.target.value)}
+              className="min-h-[120px]"
+            />
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg cursor-pointer hover:bg-muted transition-colors text-sm text-muted-foreground">
+                <ImageIcon className="w-4 h-4" />
+                {aiImageBase64 ? "Image uploaded ✓" : "Upload question image"}
+                <input type="file" accept="image/*" className="hidden" onChange={handleAiImageUpload} />
+              </label>
+              {aiImageBase64 && (
+                <button onClick={() => setAiImageBase64(null)} className="text-xs text-destructive hover:underline">Remove image</button>
+              )}
+              <div className="flex-1" />
+              <Button onClick={handleAiParse} disabled={aiParsing || (!aiText.trim() && !aiImageBase64)} className="gap-2">
+                {aiParsing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                {aiParsing ? "Parsing..." : "Extract Questions with AI"}
+              </Button>
+            </div>
           </div>
         </div>
 
