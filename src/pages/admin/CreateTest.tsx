@@ -89,6 +89,9 @@ export default function CreateTest() {
   const [endsTime, setEndsTime] = useState("18:00");
   const [questions, setQuestions] = useState<QuestionForm[]>([{ ...emptyQuestion }]);
   const [uploadingImage, setUploadingImage] = useState<string | null>(null);
+  const [aiText, setAiText] = useState("");
+  const [aiImageBase64, setAiImageBase64] = useState<string | null>(null);
+  const [aiParsing, setAiParsing] = useState(false);
 
   if (authLoading) {
     return (
