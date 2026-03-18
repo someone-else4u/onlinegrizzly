@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { 
   Shield, 
   ArrowLeft,
@@ -10,7 +11,9 @@ import {
   Loader2,
   CalendarIcon,
   Upload,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Sparkles,
+  Wand2
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
