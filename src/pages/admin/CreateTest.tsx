@@ -388,6 +388,41 @@ export default function CreateTest() {
           </div>
         </div>
 
+        {/* AI Question Parser */}
+        <div className="bg-card rounded-xl border-2 border-dashed border-primary/30 p-6 mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <Wand2 className="w-5 h-5 text-primary" />
+            <h2 className="text-lg font-display font-semibold text-foreground">AI Question Parser</h2>
+            <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">Beta</span>
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            Paste question text or upload an image with questions — AI will extract and format them as MCQs automatically.
+          </p>
+          <div className="space-y-4">
+            <Textarea
+              placeholder="Paste your questions here... e.g.&#10;1. What is Newton's first law?&#10;A) Law of inertia B) F=ma C) Action-reaction D) Gravity&#10;Answer: A"
+              value={aiText}
+              onChange={(e) => setAiText(e.target.value)}
+              className="min-h-[120px]"
+            />
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg cursor-pointer hover:bg-muted transition-colors text-sm text-muted-foreground">
+                <ImageIcon className="w-4 h-4" />
+                {aiImageBase64 ? "Image uploaded ✓" : "Upload question image"}
+                <input type="file" accept="image/*" className="hidden" onChange={handleAiImageUpload} />
+              </label>
+              {aiImageBase64 && (
+                <button onClick={() => setAiImageBase64(null)} className="text-xs text-destructive hover:underline">Remove image</button>
+              )}
+              <div className="flex-1" />
+              <Button onClick={handleAiParse} disabled={aiParsing || (!aiText.trim() && !aiImageBase64)} className="gap-2">
+                {aiParsing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                {aiParsing ? "Parsing..." : "Extract Questions with AI"}
+              </Button>
+            </div>
+          </div>
+        </div>
+
         {/* Questions */}
         <div className="space-y-6">
           <div className="flex items-center justify-between">
