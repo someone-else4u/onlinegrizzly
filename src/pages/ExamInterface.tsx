@@ -261,16 +261,19 @@ export default function ExamInterface() {
   };
 
   const handleSubmit = useCallback(async () => {
-    if (!test || !user?.id || submitting) return;
+    if (!test || !user?.id || !testId || submitting) return;
     
     setSubmitting(true);
+    setShowSubmitModal(false);
     
     try {
       // Fetch questions with correct answers
-      const { data: questionsData } = await supabase
+      const { data: questionsData, error: fetchError } = await supabase
         .from('questions')
         .select('id, correct_option, marks, negative_marks')
         .eq('test_id', testId);
+
+      if (fetchError) throw fetchError;
 
       let score = 0;
       let correctAnswers = 0;
@@ -281,12 +284,19 @@ export default function ExamInterface() {
         const answer = answers[q.id];
         if (!answer?.selectedOptionId) {
           unanswered++;
-        } else if (answer.selectedOptionId.toUpperCase() === q.correct_option) {
-          correctAnswers++;
-          score += q.marks;
         } else {
-          wrongAnswers++;
-          score -= q.negative_marks;
+          const selected = answer.selectedOptionId.toUpperCase();
+          const correct = q.correct_option?.toUpperCase();
+          if (correct && selected === correct) {
+            correctAnswers++;
+            score += q.marks;
+          } else if (correct) {
+            wrongAnswers++;
+            score -= q.negative_marks;
+          } else {
+            // No correct answer set, count as unanswered for scoring
+            unanswered++;
+          }
         }
       });
 
@@ -309,6 +319,11 @@ export default function ExamInterface() {
 
       if (error) throw error;
 
+      // Exit fullscreen
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      }
+
       // Clear localStorage
       localStorage.removeItem(`exam-${testId}-answers`);
       localStorage.removeItem(`exam-${testId}-time`);
@@ -321,7 +336,7 @@ export default function ExamInterface() {
         toast.error('You have already submitted this test');
         navigate(`/test/${testId}/results`);
       } else {
-        toast.error('Failed to submit test');
+        toast.error(`Failed to submit test: ${error.message || 'Unknown error'}`);
       }
     } finally {
       setSubmitting(false);
