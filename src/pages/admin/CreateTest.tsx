@@ -148,6 +148,53 @@ export default function CreateTest() {
     return combined.toISOString();
   };
 
+  const handleAiParse = async () => {
+    if (!aiText.trim() && !aiImageBase64) {
+      toast.error("Please enter text or upload an image for AI to parse");
+      return;
+    }
+    setAiParsing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('parse-questions', {
+        body: { text: aiText.trim() || undefined, imageBase64: aiImageBase64 || undefined },
+      });
+      if (error) throw error;
+      if (data?.questions?.length > 0) {
+        const parsed: QuestionForm[] = data.questions.map((q: any) => ({
+          ...emptyQuestion,
+          question_text: q.question_text || "",
+          option_a: q.option_a || "",
+          option_b: q.option_b || "",
+          option_c: q.option_c || "",
+          option_d: q.option_d || "",
+          correct_option: ["A","B","C","D"].includes(q.correct_option) ? q.correct_option : null,
+          subject: q.subject || "physics",
+          difficulty: q.difficulty || "medium",
+          topic: q.topic || "",
+        }));
+        setQuestions(prev => [...prev, ...parsed]);
+        setAiText("");
+        setAiImageBase64(null);
+        toast.success(`AI extracted ${parsed.length} question(s)!`);
+      } else {
+        toast.error("AI couldn't extract any questions from the input");
+      }
+    } catch (e: any) {
+      console.error("AI parse error:", e);
+      toast.error(e.message || "Failed to parse questions with AI");
+    } finally {
+      setAiParsing(false);
+    }
+  };
+
+  const handleAiImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setAiImageBase64(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
   const handleSave = async (publish: boolean) => {
     if (!testTitle.trim()) { toast.error("Please enter a test title"); return; }
     if (questions.length === 0) { toast.error("Please add at least one question"); return; }
