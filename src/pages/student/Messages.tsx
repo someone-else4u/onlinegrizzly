@@ -15,6 +15,11 @@ export default function StudentMessages() {
   const { user } = useAuth();
   const { messages, contacts, loading, selectedContact, setSelectedContact, sendMessage } = useMessages();
   const [newMessage, setNewMessage] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const handleSend = async () => {
     if (!newMessage.trim()) return;
