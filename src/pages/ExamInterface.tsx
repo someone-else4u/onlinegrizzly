@@ -94,10 +94,10 @@ export default function ExamInterface() {
       setTest(testData);
       setTimeRemaining(testData.duration * 60);
 
-      // Fetch questions
+      // Fetch questions (exclude correct_option to prevent cheating)
       const { data: questionsData, error: questionsError } = await supabase
         .from('questions')
-        .select('*')
+        .select('id, question_text, question_image_url, option_a, option_b, option_c, option_d, option_a_image, option_b_image, option_c_image, option_d_image, marks, negative_marks, topic, subject')
         .eq('test_id', testId)
         .order('created_at', { ascending: true });
 
