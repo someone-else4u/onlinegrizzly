@@ -267,55 +267,22 @@ export default function ExamInterface() {
     setShowSubmitModal(false);
     
     try {
-      // Fetch questions with correct answers
-      const { data: questionsData, error: fetchError } = await supabase
-        .from('questions')
-        .select('id, correct_option, marks, negative_marks')
-        .eq('test_id', testId);
-
-      if (fetchError) throw fetchError;
-
-      let score = 0;
-      let correctAnswers = 0;
-      let wrongAnswers = 0;
-      let unanswered = 0;
-
-      (questionsData || []).forEach(q => {
-        const answer = answers[q.id];
-        if (!answer?.selectedOptionId) {
-          unanswered++;
-        } else {
-          const selected = answer.selectedOptionId.toUpperCase();
-          const correct = q.correct_option?.toUpperCase();
-          if (correct && selected === correct) {
-            correctAnswers++;
-            score += q.marks;
-          } else if (correct) {
-            wrongAnswers++;
-            score -= q.negative_marks;
-          } else {
-            // No correct answer set, count as unanswered for scoring
-            unanswered++;
-          }
+      // Build answers map: question_id -> selected_option
+      const answersMap: Record<string, string> = {};
+      Object.entries(answers).forEach(([qId, answer]) => {
+        if (answer.selectedOptionId) {
+          answersMap[qId] = answer.selectedOptionId;
         }
       });
 
-      const totalMarks = (questionsData || []).reduce((acc, q) => acc + q.marks, 0);
       const timeTaken = (test.duration * 60) - timeRemaining;
 
-      // Save submission
-      const { error } = await supabase
-        .from('submissions')
-        .insert({
-          test_id: testId,
-          user_id: user.id,
-          score: Math.max(0, score),
-          total_marks: totalMarks,
-          correct_answers: correctAnswers,
-          wrong_answers: wrongAnswers,
-          unanswered,
-          time_taken: timeTaken,
-        });
+      // Submit via server-side RPC (score calculated securely on server)
+      const { data: result, error } = await supabase.rpc('submit_test', {
+        p_test_id: testId,
+        p_answers: answersMap,
+        p_time_taken: timeTaken,
+      });
 
       if (error) throw error;
 
