@@ -158,7 +158,7 @@ export default function StudentMessages() {
               </div>
 
               {/* Messages */}
-              <div className="flex-1 overflow-auto p-4 space-y-4">
+              <div className="flex-1 overflow-auto p-4 space-y-4" id="student-messages-scroll">
                 {messages.length === 0 ? (
                   <div className="text-center text-muted-foreground py-8">
                     No messages yet. Start the conversation!
