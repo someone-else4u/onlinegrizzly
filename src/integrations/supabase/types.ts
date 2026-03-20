@@ -344,6 +344,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      submit_test: {
+        Args: { p_answers: Json; p_test_id: string; p_time_taken: number }
+        Returns: Json
+      }
     }
     Enums: {
       app_role: "admin" | "student"
