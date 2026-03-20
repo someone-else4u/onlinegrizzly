@@ -139,6 +139,8 @@ export function useAuth() {
   };
 
   const signOut = async () => {
+    // Clear session tab marker so re-opening browser won't auto-sign-out loop
+    sessionStorage.removeItem('app_session_active');
     const { error } = await supabase.auth.signOut();
     if (error) {
       toast.error(error.message);

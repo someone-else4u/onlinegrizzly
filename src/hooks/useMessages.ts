@@ -28,6 +28,12 @@ export function useMessages() {
   const [loading, setLoading] = useState(true);
   const [selectedContact, setSelectedContact] = useState<ChatContact | null>(null);
   const profileCache = useRef<Record<string, string>>({});
+  const selectedContactRef = useRef<ChatContact | null>(null);
+
+  // Keep ref in sync so realtime callback always sees latest
+  useEffect(() => {
+    selectedContactRef.current = selectedContact;
+  }, [selectedContact]);
 
   const getProfileName = async (userId: string): Promise<string> => {
     if (profileCache.current[userId]) return profileCache.current[userId];
@@ -110,6 +116,7 @@ export function useMessages() {
         group_id: selectedContact.type === 'group' ? selectedContact.id : null,
       });
       if (error) throw error;
+      // Don't manually append – realtime will handle it
     } catch (error) {
       console.error('Error sending message:', error);
     }
@@ -120,33 +127,49 @@ export function useMessages() {
   }, [fetchContacts]);
 
   useEffect(() => {
-    if (selectedContact) fetchMessages();
+    if (selectedContact) {
+      fetchMessages();
+    } else {
+      setMessages([]);
+    }
   }, [selectedContact, fetchMessages]);
 
-  // Real-time subscription
+  // Real-time subscription — single channel for user's lifetime
   useEffect(() => {
     if (!user) return;
 
     const channel = supabase
-      .channel('messages-realtime')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, async (payload) => {
-        const newMsg = payload.new as any;
-        if (!selectedContact) return;
+      .channel(`messages-rt-${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages' },
+        async (payload) => {
+          const newMsg = payload.new as any;
+          const current = selectedContactRef.current;
+          if (!current) return;
 
-        const isRelevant = selectedContact.type === 'group'
-          ? newMsg.group_id === selectedContact.id
-          : (newMsg.sender_id === selectedContact.id && newMsg.receiver_id === user.id) ||
-            (newMsg.sender_id === user.id && newMsg.receiver_id === selectedContact.id);
+          const isRelevant = current.type === 'group'
+            ? newMsg.group_id === current.id && newMsg.is_group === true
+            : !newMsg.is_group &&
+              ((newMsg.sender_id === current.id && newMsg.receiver_id === user.id) ||
+               (newMsg.sender_id === user.id && newMsg.receiver_id === current.id));
 
-        if (isRelevant) {
-          const senderName = await getProfileName(newMsg.sender_id);
-          setMessages(prev => [...prev, { ...newMsg, sender_name: senderName }]);
+          if (isRelevant) {
+            const senderName = await getProfileName(newMsg.sender_id);
+            setMessages(prev => {
+              // Deduplicate by id
+              if (prev.some(m => m.id === newMsg.id)) return prev;
+              return [...prev, { ...newMsg, sender_name: senderName }];
+            });
+          }
         }
-      })
+      )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
-  }, [user, selectedContact]);
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   return {
     messages, contacts, loading,

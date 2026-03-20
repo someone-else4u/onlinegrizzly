@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
@@ -16,6 +16,11 @@ export default function AdminMessages() {
   const { messages, contacts, loading, selectedContact, setSelectedContact, sendMessage } = useMessages();
   const [newMessage, setNewMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const handleSend = async () => {
     if (!newMessage.trim()) return;
@@ -196,6 +201,7 @@ export default function AdminMessages() {
                     </div>
                   ))
                 )}
+                <div ref={messagesEndRef} />
               </div>
 
               {/* Input */}
