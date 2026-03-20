@@ -187,6 +187,7 @@ export default function StudentMessages() {
                     </div>
                   ))
                 )}
+                <div ref={messagesEndRef} />
               </div>
 
               {/* Input */}

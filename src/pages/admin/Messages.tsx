@@ -201,6 +201,7 @@ export default function AdminMessages() {
                     </div>
                   ))
                 )}
+                <div ref={messagesEndRef} />
               </div>
 
               {/* Input */}
