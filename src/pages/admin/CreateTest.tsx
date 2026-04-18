@@ -109,6 +109,49 @@ export default function CreateTest() {
   const [aiImageBase64, setAiImageBase64] = useState<string | null>(null);
   const [aiParsing, setAiParsing] = useState(false);
   const [markingPattern, setMarkingPattern] = useState<MarkingPattern>("jee_main");
+  const [pdfParsing, setPdfParsing] = useState(false);
+  const [pdfProgress, setPdfProgress] = useState<{ page: number; total: number } | null>(null);
+
+  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (file.type !== "application/pdf") {
+      toast.error("Please upload a PDF file");
+      return;
+    }
+    setPdfParsing(true);
+    setPdfProgress({ page: 0, total: 0 });
+    try {
+      toast.info("Extracting questions from PDF — this may take a minute…");
+      const extracted = await extractQuestionsFromPdf(file, (page, total) =>
+        setPdfProgress({ page, total })
+      );
+      if (extracted.length === 0) {
+        toast.error("AI couldn't find any questions in this PDF");
+      } else {
+        const preset = markingPattern === "custom" ? null : MARKING_PRESETS[markingPattern];
+        const newQs: QuestionForm[] = extracted.map((q) => ({
+          ...emptyQuestion,
+          ...q,
+          marks: preset?.marks ?? 4,
+          negative_marks: preset?.negative_marks ?? 1,
+        }));
+        // Replace the single empty question if user hasn't touched it
+        setQuestions((prev) => {
+          const isEmptyStart = prev.length === 1 && !prev[0].question_text && !prev[0].question_image_url;
+          return isEmptyStart ? newQs : [...prev, ...newQs];
+        });
+        toast.success(`Extracted ${extracted.length} question(s) from PDF!`);
+      }
+    } catch (err: any) {
+      console.error("PDF parse error:", err);
+      toast.error(err.message || "Failed to parse PDF");
+    } finally {
+      setPdfParsing(false);
+      setPdfProgress(null);
+    }
+  };
 
   const applyMarkingPatternToAll = (pattern: MarkingPattern) => {
     setMarkingPattern(pattern);
