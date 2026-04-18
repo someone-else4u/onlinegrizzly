@@ -13,8 +13,10 @@ import {
   Upload,
   Image as ImageIcon,
   Sparkles,
-  Wand2
+  Wand2,
+  FileText
 } from "lucide-react";
+import { extractQuestionsFromPdf } from "@/lib/pdfExtractor";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -107,6 +109,49 @@ export default function CreateTest() {
   const [aiImageBase64, setAiImageBase64] = useState<string | null>(null);
   const [aiParsing, setAiParsing] = useState(false);
   const [markingPattern, setMarkingPattern] = useState<MarkingPattern>("jee_main");
+  const [pdfParsing, setPdfParsing] = useState(false);
+  const [pdfProgress, setPdfProgress] = useState<{ page: number; total: number } | null>(null);
+
+  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (file.type !== "application/pdf") {
+      toast.error("Please upload a PDF file");
+      return;
+    }
+    setPdfParsing(true);
+    setPdfProgress({ page: 0, total: 0 });
+    try {
+      toast.info("Extracting questions from PDF — this may take a minute…");
+      const extracted = await extractQuestionsFromPdf(file, (page, total) =>
+        setPdfProgress({ page, total })
+      );
+      if (extracted.length === 0) {
+        toast.error("AI couldn't find any questions in this PDF");
+      } else {
+        const preset = markingPattern === "custom" ? null : MARKING_PRESETS[markingPattern];
+        const newQs: QuestionForm[] = extracted.map((q) => ({
+          ...emptyQuestion,
+          ...q,
+          marks: preset?.marks ?? 4,
+          negative_marks: preset?.negative_marks ?? 1,
+        }));
+        // Replace the single empty question if user hasn't touched it
+        setQuestions((prev) => {
+          const isEmptyStart = prev.length === 1 && !prev[0].question_text && !prev[0].question_image_url;
+          return isEmptyStart ? newQs : [...prev, ...newQs];
+        });
+        toast.success(`Extracted ${extracted.length} question(s) from PDF!`);
+      }
+    } catch (err: any) {
+      console.error("PDF parse error:", err);
+      toast.error(err.message || "Failed to parse PDF");
+    } finally {
+      setPdfParsing(false);
+      setPdfProgress(null);
+    }
+  };
 
   const applyMarkingPatternToAll = (pattern: MarkingPattern) => {
     setMarkingPattern(pattern);
@@ -439,6 +484,38 @@ export default function CreateTest() {
             </div>
             <p className="text-xs text-muted-foreground">Leave dates empty if the test should be available indefinitely once published.</p>
           </div>
+        </div>
+
+        {/* PDF Past-Paper Importer */}
+        <div className="bg-card rounded-xl border-2 border-dashed border-accent/40 p-6 mb-8">
+          <div className="flex items-center gap-2 mb-2">
+            <FileText className="w-5 h-5 text-accent" />
+            <h2 className="text-lg font-display font-semibold text-foreground">Import Past Exam PDF</h2>
+            <span className="text-xs bg-accent/10 text-accent px-2 py-0.5 rounded-full font-medium">AI</span>
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            Upload a previous JEE / NEET paper (PDF). AI will extract every question, render math as LaTeX, and
+            automatically <strong>crop diagrams, graphs, tables, circuits and complex math</strong> as images so the
+            paper feels identical to the original.
+          </p>
+          <div className="flex items-center gap-4 flex-wrap">
+            <label className={cn(
+              "flex items-center gap-2 px-4 py-2 border border-border rounded-lg text-sm transition-colors",
+              pdfParsing ? "opacity-60 cursor-not-allowed" : "cursor-pointer hover:bg-muted"
+            )}>
+              {pdfParsing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+              {pdfParsing ? "Processing PDF…" : "Upload PDF"}
+              <input type="file" accept="application/pdf" className="hidden" disabled={pdfParsing} onChange={handlePdfUpload} />
+            </label>
+            {pdfProgress && pdfProgress.total > 0 && (
+              <span className="text-xs text-muted-foreground">
+                Page {pdfProgress.page} of {pdfProgress.total}
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground mt-3">
+            ⚡ Tip: Higher quality scans give better extraction. Each page is sent to AI separately, so longer PDFs take more time.
+          </p>
         </div>
 
         {/* AI Question Parser */}
