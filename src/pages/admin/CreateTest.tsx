@@ -361,6 +361,35 @@ export default function CreateTest() {
           </div>
         </div>
 
+        {/* Marking Pattern */}
+        <div className="bg-card rounded-xl border border-border p-6 mb-8">
+          <h2 className="text-lg font-display font-semibold text-foreground mb-2">Marking Pattern</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Choose an exam pattern — this sets the default marks &amp; negative marks for every question. You can still override per question.
+          </p>
+          <div className="grid md:grid-cols-4 gap-3">
+            {(["jee_main", "jee_advanced", "neet", "custom"] as MarkingPattern[]).map((p) => {
+              const label = p === "custom" ? "Custom (per question)" : MARKING_PRESETS[p].label;
+              const active = markingPattern === p;
+              return (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => applyMarkingPatternToAll(p)}
+                  className={cn(
+                    "rounded-lg border p-3 text-sm text-left transition-colors",
+                    active
+                      ? "border-primary bg-primary/5 text-foreground ring-2 ring-primary/30"
+                      : "border-border hover:border-primary/50 text-muted-foreground"
+                  )}
+                >
+                  <div className="font-medium text-foreground">{label}</div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Scheduling */}
         <div className="bg-card rounded-xl border border-border p-6 mb-8">
           <h2 className="text-lg font-display font-semibold text-foreground mb-4">Test Schedule</h2>
