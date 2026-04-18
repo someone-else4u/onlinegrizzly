@@ -124,6 +124,11 @@ export function useAuth() {
   };
 
   const signIn = async (email: string, password: string) => {
+    // Always force a fresh authentication — sign out any leftover session first
+    // so the password is genuinely required (prevents auto-login on shared browsers).
+    await supabase.auth.signOut().catch(() => {});
+    sessionStorage.setItem('app_session_active', '1');
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
