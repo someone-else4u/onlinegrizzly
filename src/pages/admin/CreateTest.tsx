@@ -106,6 +106,14 @@ export default function CreateTest() {
   const [aiText, setAiText] = useState("");
   const [aiImageBase64, setAiImageBase64] = useState<string | null>(null);
   const [aiParsing, setAiParsing] = useState(false);
+  const [markingPattern, setMarkingPattern] = useState<MarkingPattern>("jee_main");
+
+  const applyMarkingPatternToAll = (pattern: MarkingPattern) => {
+    setMarkingPattern(pattern);
+    if (pattern === "custom") return;
+    const preset = MARKING_PRESETS[pattern];
+    setQuestions(prev => prev.map(q => ({ ...q, marks: preset.marks, negative_marks: preset.negative_marks })));
+  };
 
   if (authLoading) {
     return (
