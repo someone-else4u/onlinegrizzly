@@ -515,51 +515,97 @@ export default function CreateTest() {
                   </div>
                 </div>
 
+                {/* Marks (per question) */}
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">Marks (+)</label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={q.marks}
+                      onChange={(e) => updateQuestion(index, 'marks', parseInt(e.target.value) || 0)}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">Negative Marks (-)</label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={q.negative_marks}
+                      onChange={(e) => updateQuestion(index, 'negative_marks', parseInt(e.target.value) || 0)}
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <label className="flex items-center gap-2 cursor-pointer h-10">
+                      <input
+                        type="checkbox"
+                        checked={q.has_options}
+                        onChange={(e) => updateQuestion(index, 'has_options', e.target.checked)}
+                        className="w-4 h-4 rounded border-border accent-primary"
+                      />
+                      <span className="text-sm font-medium text-foreground">Has MCQ options</span>
+                    </label>
+                  </div>
+                </div>
+
                 {/* Question Text + Image */}
                 <div>
                   <label className="text-sm font-medium text-foreground mb-2 block">Question Text</label>
                   <textarea
-                    className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    placeholder="Enter your question here (or upload image below)..."
+                    className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm font-mono"
+                    placeholder={'Enter your question. For math, use LaTeX:  inline $E=mc^2$  or block $$\\int_0^1 x\\,dx$$'}
                     value={q.question_text}
                     onChange={(e) => updateQuestion(index, 'question_text', e.target.value)}
                   />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    💡 Tip: Wrap math in <code className="bg-muted px-1 rounded">$ ... $</code> for inline or{" "}
+                    <code className="bg-muted px-1 rounded">$$ ... $$</code> for block. Example:{" "}
+                    <code className="bg-muted px-1 rounded">{"$x^2 + y^2 = r^2$"}</code>
+                  </p>
                   <div className="mt-2">
                     <ImageUploadButton index={index} field="question_image_url" currentUrl={q.question_image_url} label="Upload question image" />
                   </div>
                 </div>
 
-                {/* Options with image support */}
-                <div className="grid md:grid-cols-2 gap-4">
-                  {(['a', 'b', 'c', 'd'] as const).map((opt) => (
-                    <div key={opt}>
-                      <label className="text-sm font-medium text-foreground mb-2 block">Option {opt.toUpperCase()}</label>
-                      <Input
-                        placeholder={`Option ${opt.toUpperCase()} (text)`}
-                        value={q[`option_${opt}` as keyof QuestionForm] as string}
-                        onChange={(e) => updateQuestion(index, `option_${opt}` as keyof QuestionForm, e.target.value)}
-                        className="mb-2"
-                      />
-                      <ImageUploadButton index={index} field={`option_${opt}_image` as keyof QuestionForm} currentUrl={q[`option_${opt}_image` as keyof QuestionForm] as string | null} label={`Upload option ${opt.toUpperCase()} image`} />
+                {/* Options with image support — only when has_options is true */}
+                {q.has_options ? (
+                  <>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      {(['a', 'b', 'c', 'd'] as const).map((opt) => (
+                        <div key={opt}>
+                          <label className="text-sm font-medium text-foreground mb-2 block">Option {opt.toUpperCase()}</label>
+                          <Input
+                            placeholder={`Option ${opt.toUpperCase()} (text or LaTeX)`}
+                            value={q[`option_${opt}` as keyof QuestionForm] as string}
+                            onChange={(e) => updateQuestion(index, `option_${opt}` as keyof QuestionForm, e.target.value)}
+                            className="mb-2 font-mono text-xs"
+                          />
+                          <ImageUploadButton index={index} field={`option_${opt}_image` as keyof QuestionForm} currentUrl={q[`option_${opt}_image` as keyof QuestionForm] as string | null} label={`Upload option ${opt.toUpperCase()} image`} />
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
 
-                {/* Correct Answer (optional - can be set later) */}
-                <div>
-                  <label className="text-sm font-medium text-foreground mb-2 block">Correct Answer <span className="text-muted-foreground">(can be set later)</span></label>
-                  <select
-                    value={q.correct_option || ''}
-                    onChange={(e) => updateQuestion(index, 'correct_option', e.target.value || null)}
-                    className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  >
-                    <option value="">Not set yet</option>
-                    <option value="A">Option A</option>
-                    <option value="B">Option B</option>
-                    <option value="C">Option C</option>
-                    <option value="D">Option D</option>
-                  </select>
-                </div>
+                    {/* Correct Answer (optional - can be set later) */}
+                    <div>
+                      <label className="text-sm font-medium text-foreground mb-2 block">Correct Answer <span className="text-muted-foreground">(can be set later)</span></label>
+                      <select
+                        value={q.correct_option || ''}
+                        onChange={(e) => updateQuestion(index, 'correct_option', e.target.value || null)}
+                        className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      >
+                        <option value="">Not set yet</option>
+                        <option value="A">Option A</option>
+                        <option value="B">Option B</option>
+                        <option value="C">Option C</option>
+                        <option value="D">Option D</option>
+                      </select>
+                    </div>
+                  </>
+                ) : (
+                  <div className="rounded-lg border border-dashed border-border bg-muted/30 p-4 text-sm text-muted-foreground">
+                    📝 No-options mode — this question will be displayed without MCQ choices (e.g., subjective / numerical / descriptive).
+                  </div>
+                )}
               </div>
             </div>
           ))}
