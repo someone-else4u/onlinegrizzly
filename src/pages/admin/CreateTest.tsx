@@ -39,9 +39,18 @@ const questionSchema = z.object({
   subject: z.string().min(1, "Subject is required"),
 });
 
+type MarkingPattern = "jee_main" | "jee_advanced" | "neet" | "custom";
+
+const MARKING_PRESETS: Record<Exclude<MarkingPattern, "custom">, { marks: number; negative_marks: number; label: string }> = {
+  jee_main: { marks: 4, negative_marks: 1, label: "JEE Main (+4 / -1)" },
+  jee_advanced: { marks: 4, negative_marks: 2, label: "JEE Advanced (+4 / -2)" },
+  neet: { marks: 4, negative_marks: 1, label: "NEET (+4 / -1)" },
+};
+
 interface QuestionForm {
   question_text: string;
   question_image_url: string | null;
+  has_options: boolean;
   option_a: string;
   option_b: string;
   option_c: string;
@@ -54,11 +63,14 @@ interface QuestionForm {
   difficulty: "easy" | "medium" | "hard";
   topic: string;
   subject: string;
+  marks: number;
+  negative_marks: number;
 }
 
 const emptyQuestion: QuestionForm = {
   question_text: "",
   question_image_url: null,
+  has_options: true,
   option_a: "",
   option_b: "",
   option_c: "",
@@ -71,6 +83,8 @@ const emptyQuestion: QuestionForm = {
   difficulty: "medium",
   topic: "",
   subject: "physics",
+  marks: 4,
+  negative_marks: 1,
 };
 
 export default function CreateTest() {
