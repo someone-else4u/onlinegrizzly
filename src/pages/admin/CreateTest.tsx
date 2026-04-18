@@ -13,8 +13,10 @@ import {
   Upload,
   Image as ImageIcon,
   Sparkles,
-  Wand2
+  Wand2,
+  FileText
 } from "lucide-react";
+import { extractQuestionsFromPdf } from "@/lib/pdfExtractor";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
