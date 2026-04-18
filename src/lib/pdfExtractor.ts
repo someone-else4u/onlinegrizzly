@@ -84,7 +84,7 @@ export async function extractQuestionsFromPdf(
     const ctx = canvas.getContext("2d");
     if (!ctx) continue;
 
-    await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+    await page.render({ canvasContext: ctx, viewport } as any).promise;
 
     // Smaller image for AI to keep payload reasonable
     const aiCanvas = document.createElement("canvas");
