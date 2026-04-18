@@ -486,6 +486,38 @@ export default function CreateTest() {
           </div>
         </div>
 
+        {/* PDF Past-Paper Importer */}
+        <div className="bg-card rounded-xl border-2 border-dashed border-accent/40 p-6 mb-8">
+          <div className="flex items-center gap-2 mb-2">
+            <FileText className="w-5 h-5 text-accent" />
+            <h2 className="text-lg font-display font-semibold text-foreground">Import Past Exam PDF</h2>
+            <span className="text-xs bg-accent/10 text-accent px-2 py-0.5 rounded-full font-medium">AI</span>
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            Upload a previous JEE / NEET paper (PDF). AI will extract every question, render math as LaTeX, and
+            automatically <strong>crop diagrams, graphs, tables, circuits and complex math</strong> as images so the
+            paper feels identical to the original.
+          </p>
+          <div className="flex items-center gap-4 flex-wrap">
+            <label className={cn(
+              "flex items-center gap-2 px-4 py-2 border border-border rounded-lg text-sm transition-colors",
+              pdfParsing ? "opacity-60 cursor-not-allowed" : "cursor-pointer hover:bg-muted"
+            )}>
+              {pdfParsing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+              {pdfParsing ? "Processing PDF…" : "Upload PDF"}
+              <input type="file" accept="application/pdf" className="hidden" disabled={pdfParsing} onChange={handlePdfUpload} />
+            </label>
+            {pdfProgress && pdfProgress.total > 0 && (
+              <span className="text-xs text-muted-foreground">
+                Page {pdfProgress.page} of {pdfProgress.total}
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground mt-3">
+            ⚡ Tip: Higher quality scans give better extraction. Each page is sent to AI separately, so longer PDFs take more time.
+          </p>
+        </div>
+
         {/* AI Question Parser */}
         <div className="bg-card rounded-xl border-2 border-dashed border-primary/30 p-6 mb-8">
           <div className="flex items-center gap-2 mb-4">
