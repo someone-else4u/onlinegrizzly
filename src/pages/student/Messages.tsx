@@ -10,6 +10,7 @@ import { StudentSidebar } from "@/components/StudentSidebar";
 import { useMessages } from "@/hooks/useMessages";
 import { useAuth } from "@/hooks/useAuth";
 import { AIChatPanel } from "@/components/AIChatPanel";
+import { MathRenderer } from "@/components/MathRenderer";
 
 export default function StudentMessages() {
   const { user } = useAuth();
@@ -177,7 +178,7 @@ export default function StudentMessages() {
                         {selectedContact.type === 'group' && msg.sender_id !== user?.id && (
                           <p className="text-xs font-medium mb-1 opacity-70">{msg.sender_name}</p>
                         )}
-                        <p>{msg.text}</p>
+                        <p><MathRenderer text={msg.text} /></p>
                         <p className={`text-xs mt-1 ${
                           msg.sender_id === user?.id ? 'text-primary-foreground/70' : 'text-muted-foreground'
                         }`}>

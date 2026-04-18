@@ -39,9 +39,18 @@ const questionSchema = z.object({
   subject: z.string().min(1, "Subject is required"),
 });
 
+type MarkingPattern = "jee_main" | "jee_advanced" | "neet" | "custom";
+
+const MARKING_PRESETS: Record<Exclude<MarkingPattern, "custom">, { marks: number; negative_marks: number; label: string }> = {
+  jee_main: { marks: 4, negative_marks: 1, label: "JEE Main (+4 / -1)" },
+  jee_advanced: { marks: 4, negative_marks: 2, label: "JEE Advanced (+4 / -2)" },
+  neet: { marks: 4, negative_marks: 1, label: "NEET (+4 / -1)" },
+};
+
 interface QuestionForm {
   question_text: string;
   question_image_url: string | null;
+  has_options: boolean;
   option_a: string;
   option_b: string;
   option_c: string;
@@ -54,11 +63,14 @@ interface QuestionForm {
   difficulty: "easy" | "medium" | "hard";
   topic: string;
   subject: string;
+  marks: number;
+  negative_marks: number;
 }
 
 const emptyQuestion: QuestionForm = {
   question_text: "",
   question_image_url: null,
+  has_options: true,
   option_a: "",
   option_b: "",
   option_c: "",
@@ -71,6 +83,8 @@ const emptyQuestion: QuestionForm = {
   difficulty: "medium",
   topic: "",
   subject: "physics",
+  marks: 4,
+  negative_marks: 1,
 };
 
 export default function CreateTest() {
@@ -92,6 +106,14 @@ export default function CreateTest() {
   const [aiText, setAiText] = useState("");
   const [aiImageBase64, setAiImageBase64] = useState<string | null>(null);
   const [aiParsing, setAiParsing] = useState(false);
+  const [markingPattern, setMarkingPattern] = useState<MarkingPattern>("jee_main");
+
+  const applyMarkingPatternToAll = (pattern: MarkingPattern) => {
+    setMarkingPattern(pattern);
+    if (pattern === "custom") return;
+    const preset = MARKING_PRESETS[pattern];
+    setQuestions(prev => prev.map(q => ({ ...q, marks: preset.marks, negative_marks: preset.negative_marks })));
+  };
 
   if (authLoading) {
     return (
@@ -226,19 +248,21 @@ export default function CreateTest() {
       const questionsToInsert = questions.map(q => ({
         test_id: testData.id,
         question_text: q.question_text || 'Image Question',
-        option_a: q.option_a || 'See image',
-        option_b: q.option_b || 'See image',
-        option_c: q.option_c || 'See image',
-        option_d: q.option_d || 'See image',
-        correct_option: q.correct_option,
+        option_a: q.has_options ? (q.option_a || 'See image') : 'N/A',
+        option_b: q.has_options ? (q.option_b || 'See image') : 'N/A',
+        option_c: q.has_options ? (q.option_c || 'See image') : 'N/A',
+        option_d: q.has_options ? (q.option_d || 'See image') : 'N/A',
+        correct_option: q.has_options ? q.correct_option : null,
         difficulty: q.difficulty,
         topic: q.topic || null,
         subject: q.subject,
+        marks: q.marks,
+        negative_marks: q.negative_marks,
         question_image_url: q.question_image_url,
-        option_a_image: q.option_a_image,
-        option_b_image: q.option_b_image,
-        option_c_image: q.option_c_image,
-        option_d_image: q.option_d_image,
+        option_a_image: q.has_options ? q.option_a_image : null,
+        option_b_image: q.has_options ? q.option_b_image : null,
+        option_c_image: q.has_options ? q.option_c_image : null,
+        option_d_image: q.has_options ? q.option_d_image : null,
       }));
 
       const { error: questionsError } = await supabase.from('questions').insert(questionsToInsert);
@@ -334,6 +358,35 @@ export default function CreateTest() {
               <label className="text-sm font-medium text-foreground mb-2 block">Description (optional)</label>
               <Input placeholder="Brief description of the test" value={testDescription} onChange={(e) => setTestDescription(e.target.value)} />
             </div>
+          </div>
+        </div>
+
+        {/* Marking Pattern */}
+        <div className="bg-card rounded-xl border border-border p-6 mb-8">
+          <h2 className="text-lg font-display font-semibold text-foreground mb-2">Marking Pattern</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Choose an exam pattern — this sets the default marks &amp; negative marks for every question. You can still override per question.
+          </p>
+          <div className="grid md:grid-cols-4 gap-3">
+            {(["jee_main", "jee_advanced", "neet", "custom"] as MarkingPattern[]).map((p) => {
+              const label = p === "custom" ? "Custom (per question)" : MARKING_PRESETS[p].label;
+              const active = markingPattern === p;
+              return (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => applyMarkingPatternToAll(p)}
+                  className={cn(
+                    "rounded-lg border p-3 text-sm text-left transition-colors",
+                    active
+                      ? "border-primary bg-primary/5 text-foreground ring-2 ring-primary/30"
+                      : "border-border hover:border-primary/50 text-muted-foreground"
+                  )}
+                >
+                  <div className="font-medium text-foreground">{label}</div>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -462,51 +515,97 @@ export default function CreateTest() {
                   </div>
                 </div>
 
+                {/* Marks (per question) */}
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">Marks (+)</label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={q.marks}
+                      onChange={(e) => updateQuestion(index, 'marks', parseInt(e.target.value) || 0)}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">Negative Marks (-)</label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={q.negative_marks}
+                      onChange={(e) => updateQuestion(index, 'negative_marks', parseInt(e.target.value) || 0)}
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <label className="flex items-center gap-2 cursor-pointer h-10">
+                      <input
+                        type="checkbox"
+                        checked={q.has_options}
+                        onChange={(e) => updateQuestion(index, 'has_options', e.target.checked)}
+                        className="w-4 h-4 rounded border-border accent-primary"
+                      />
+                      <span className="text-sm font-medium text-foreground">Has MCQ options</span>
+                    </label>
+                  </div>
+                </div>
+
                 {/* Question Text + Image */}
                 <div>
                   <label className="text-sm font-medium text-foreground mb-2 block">Question Text</label>
                   <textarea
-                    className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    placeholder="Enter your question here (or upload image below)..."
+                    className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm font-mono"
+                    placeholder={'Enter your question. For math, use LaTeX:  inline $E=mc^2$  or block $$\\int_0^1 x\\,dx$$'}
                     value={q.question_text}
                     onChange={(e) => updateQuestion(index, 'question_text', e.target.value)}
                   />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    💡 Tip: Wrap math in <code className="bg-muted px-1 rounded">$ ... $</code> for inline or{" "}
+                    <code className="bg-muted px-1 rounded">$$ ... $$</code> for block. Example:{" "}
+                    <code className="bg-muted px-1 rounded">{"$x^2 + y^2 = r^2$"}</code>
+                  </p>
                   <div className="mt-2">
                     <ImageUploadButton index={index} field="question_image_url" currentUrl={q.question_image_url} label="Upload question image" />
                   </div>
                 </div>
 
-                {/* Options with image support */}
-                <div className="grid md:grid-cols-2 gap-4">
-                  {(['a', 'b', 'c', 'd'] as const).map((opt) => (
-                    <div key={opt}>
-                      <label className="text-sm font-medium text-foreground mb-2 block">Option {opt.toUpperCase()}</label>
-                      <Input
-                        placeholder={`Option ${opt.toUpperCase()} (text)`}
-                        value={q[`option_${opt}` as keyof QuestionForm] as string}
-                        onChange={(e) => updateQuestion(index, `option_${opt}` as keyof QuestionForm, e.target.value)}
-                        className="mb-2"
-                      />
-                      <ImageUploadButton index={index} field={`option_${opt}_image` as keyof QuestionForm} currentUrl={q[`option_${opt}_image` as keyof QuestionForm] as string | null} label={`Upload option ${opt.toUpperCase()} image`} />
+                {/* Options with image support — only when has_options is true */}
+                {q.has_options ? (
+                  <>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      {(['a', 'b', 'c', 'd'] as const).map((opt) => (
+                        <div key={opt}>
+                          <label className="text-sm font-medium text-foreground mb-2 block">Option {opt.toUpperCase()}</label>
+                          <Input
+                            placeholder={`Option ${opt.toUpperCase()} (text or LaTeX)`}
+                            value={q[`option_${opt}` as keyof QuestionForm] as string}
+                            onChange={(e) => updateQuestion(index, `option_${opt}` as keyof QuestionForm, e.target.value)}
+                            className="mb-2 font-mono text-xs"
+                          />
+                          <ImageUploadButton index={index} field={`option_${opt}_image` as keyof QuestionForm} currentUrl={q[`option_${opt}_image` as keyof QuestionForm] as string | null} label={`Upload option ${opt.toUpperCase()} image`} />
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
 
-                {/* Correct Answer (optional - can be set later) */}
-                <div>
-                  <label className="text-sm font-medium text-foreground mb-2 block">Correct Answer <span className="text-muted-foreground">(can be set later)</span></label>
-                  <select
-                    value={q.correct_option || ''}
-                    onChange={(e) => updateQuestion(index, 'correct_option', e.target.value || null)}
-                    className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  >
-                    <option value="">Not set yet</option>
-                    <option value="A">Option A</option>
-                    <option value="B">Option B</option>
-                    <option value="C">Option C</option>
-                    <option value="D">Option D</option>
-                  </select>
-                </div>
+                    {/* Correct Answer (optional - can be set later) */}
+                    <div>
+                      <label className="text-sm font-medium text-foreground mb-2 block">Correct Answer <span className="text-muted-foreground">(can be set later)</span></label>
+                      <select
+                        value={q.correct_option || ''}
+                        onChange={(e) => updateQuestion(index, 'correct_option', e.target.value || null)}
+                        className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      >
+                        <option value="">Not set yet</option>
+                        <option value="A">Option A</option>
+                        <option value="B">Option B</option>
+                        <option value="C">Option C</option>
+                        <option value="D">Option D</option>
+                      </select>
+                    </div>
+                  </>
+                ) : (
+                  <div className="rounded-lg border border-dashed border-border bg-muted/30 p-4 text-sm text-muted-foreground">
+                    📝 No-options mode — this question will be displayed without MCQ choices (e.g., subjective / numerical / descriptive).
+                  </div>
+                )}
               </div>
             </div>
           ))}

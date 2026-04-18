@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { Answer } from "@/types/exam";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { MathRenderer } from "@/components/MathRenderer";
 
 interface Question {
   id: string;
@@ -458,30 +459,30 @@ export default function ExamInterface() {
             </div>
 
             <div className="text-lg text-foreground mb-6 no-select">
-              {currentQ.text}
+              <MathRenderer text={currentQ.text} />
             </div>
 
             <div className="space-y-3">
-              {currentQ.options.map((option, index) => (
-                <button
-                  key={option.id}
-                  onClick={() => selectOption(option.id)}
-                  className={`w-full p-4 rounded-lg border-2 text-left transition-all ${
-                    currentAnswer?.selectedOptionId === option.id
-                      ? 'border-accent bg-accent/10 text-foreground'
-                      : 'border-border bg-card hover:border-accent/50 text-foreground'
-                  }`}
-                >
-                  <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full mr-3 text-sm font-medium ${
-                    currentAnswer?.selectedOptionId === option.id
-                      ? 'bg-accent text-accent-foreground'
-                      : 'bg-secondary text-secondary-foreground'
-                  }`}>
-                    {String.fromCharCode(65 + index)}
-                  </span>
-                  {option.text.substring(3)}
-                </button>
-              ))}
+              {currentQ.options.map((option, index) => {
+                const optionContent = option.text.substring(3);
+                if (optionContent.trim() === "N/A") return null;
+                return (
+                  <button
+                    key={option.id}
+                    onClick={() => selectOption(option.id)}
+                    className={`w-full p-4 rounded-lg border text-left transition-all hover:border-accent ${
+                      currentAnswer?.selectedOptionId === option.id
+                        ? 'border-accent bg-accent/10'
+                        : 'border-border hover:bg-muted'
+                    } no-select`}
+                  >
+                    <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-muted text-foreground font-medium mr-3">
+                      {String.fromCharCode(65 + index)}
+                    </span>
+                    <MathRenderer text={optionContent} />
+                  </button>
+                );
+              })}
             </div>
           </div>
 
