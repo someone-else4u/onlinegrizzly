@@ -43,11 +43,18 @@ interface Test {
   description: string | null;
 }
 
+interface MarkingSummary {
+  positive: number;
+  negative: number;
+  totalMarks: number;
+}
+
 export default function TestPreview() {
   const navigate = useNavigate();
   const { testId } = useParams();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const [test, setTest] = useState<Test | null>(null);
+  const [marking, setMarking] = useState<MarkingSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
@@ -74,6 +81,22 @@ export default function TestPreview() {
 
       if (error) throw error;
       setTest(data);
+
+      const { data: questions } = await supabase
+        .from('questions')
+        .select('marks, negative_marks')
+        .eq('test_id', testId);
+
+      if (questions) {
+        const totalMarks = questions.reduce((sum, q) => sum + Number(q.marks || 0), 0);
+        const positives = [...new Set(questions.map((q) => Number(q.marks || 0)))].sort((a, b) => a - b);
+        const negatives = [...new Set(questions.map((q) => Number(q.negative_marks || 0)))].sort((a, b) => a - b);
+        setMarking({
+          positive: positives[0] ?? 0,
+          negative: negatives[0] ?? 0,
+          totalMarks,
+        });
+      }
     } catch (error) {
       console.error('Error fetching test:', error);
     } finally {
@@ -112,7 +135,7 @@ export default function TestPreview() {
     );
   }
 
-  const totalMarks = test.total_questions * 4;
+  const totalMarks = marking?.totalMarks ?? test.total_questions * 4;
 
   return (
     <div className="min-h-screen bg-background">
@@ -146,7 +169,7 @@ export default function TestPreview() {
               { icon: Clock, label: "Duration", value: `${test.duration} min` },
               { icon: FileText, label: "Questions", value: test.total_questions.toString() },
               { label: "Total Marks", value: totalMarks.toString() },
-              { label: "Negative Marking", value: "-1 per wrong" },
+              { label: "Negative Marking", value: `-${marking?.negative ?? 1} per wrong` },
             ].map((item, index) => (
               <div key={index} className="text-primary-foreground">
                 <div className="text-sm text-primary-foreground/60 mb-1">{item.label}</div>

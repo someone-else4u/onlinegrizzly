@@ -24,7 +24,11 @@ interface Question {
   id: string;
   questionNumber: number;
   text: string;
-  options: { id: string; text: string }[];
+  imageUrl?: string | null;
+  options: { id: string; text: string; imageUrl?: string | null }[];
+  marks: number;
+  negativeMarks: number;
+  hasOptions: boolean;
   subject: string;
 }
 
@@ -108,12 +112,16 @@ export default function ExamInterface() {
         id: q.id,
         questionNumber: index + 1,
         text: q.question_text,
+        imageUrl: q.question_image_url,
         options: [
-          { id: 'a', text: `A: ${q.option_a}` },
-          { id: 'b', text: `B: ${q.option_b}` },
-          { id: 'c', text: `C: ${q.option_c}` },
-          { id: 'd', text: `D: ${q.option_d}` },
+          { id: 'a', text: `A: ${q.option_a}`, imageUrl: q.option_a_image },
+          { id: 'b', text: `B: ${q.option_b}`, imageUrl: q.option_b_image },
+          { id: 'c', text: `C: ${q.option_c}`, imageUrl: q.option_c_image },
+          { id: 'd', text: `D: ${q.option_d}`, imageUrl: q.option_d_image },
         ],
+        marks: Number(q.marks ?? 0),
+        negativeMarks: Number(q.negative_marks ?? 0),
+        hasOptions: [q.option_a, q.option_b, q.option_c, q.option_d].some((value) => value && value !== 'N/A'),
         subject: q.topic || 'General',
       }));
 
@@ -462,7 +470,21 @@ export default function ExamInterface() {
               <MathRenderer text={currentQ.text} />
             </div>
 
-            <div className="space-y-3">
+            {currentQ.imageUrl && (
+              <img
+                src={currentQ.imageUrl}
+                alt={`Question ${currentQ.questionNumber} visual`}
+                className="mb-6 max-h-[420px] w-full rounded-lg border border-border object-contain bg-muted/20"
+                loading="lazy"
+              />
+            )}
+
+            <div className="mb-6 flex flex-wrap gap-2 text-xs text-muted-foreground">
+              <span className="rounded-full bg-muted px-3 py-1">+{currentQ.marks}</span>
+              <span className="rounded-full bg-muted px-3 py-1">-{currentQ.negativeMarks}</span>
+            </div>
+
+            {currentQ.hasOptions ? <div className="space-y-3">
               {currentQ.options.map((option, index) => {
                 const optionContent = option.text.substring(3);
                 if (optionContent.trim() === "N/A") return null;
@@ -479,11 +501,25 @@ export default function ExamInterface() {
                     <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-muted text-foreground font-medium mr-3">
                       {String.fromCharCode(65 + index)}
                     </span>
-                    <MathRenderer text={optionContent} />
+                    <div className="space-y-3">
+                      <MathRenderer text={optionContent} />
+                      {option.imageUrl && (
+                        <img
+                          src={option.imageUrl}
+                          alt={`Option ${String.fromCharCode(65 + index)} visual`}
+                          className="max-h-48 w-full rounded-md border border-border object-contain bg-muted/20"
+                          loading="lazy"
+                        />
+                      )}
+                    </div>
                   </button>
                 );
               })}
-            </div>
+            </div> : (
+              <div className="rounded-lg border border-dashed border-border bg-muted/30 p-4 text-sm text-muted-foreground">
+                This question has no MCQ options. Review the prompt and image before submitting.
+              </div>
+            )}
           </div>
 
           {/* Action Buttons */}

@@ -41,12 +41,13 @@ const questionSchema = z.object({
   subject: z.string().min(1, "Subject is required"),
 });
 
-type MarkingPattern = "jee_main" | "jee_advanced" | "neet" | "custom";
+type MarkingPattern = "jee_main" | "jee_advanced" | "neet" | "nda" | "custom";
 
 const MARKING_PRESETS: Record<Exclude<MarkingPattern, "custom">, { marks: number; negative_marks: number; label: string }> = {
   jee_main: { marks: 4, negative_marks: 1, label: "JEE Main (+4 / -1)" },
   jee_advanced: { marks: 4, negative_marks: 2, label: "JEE Advanced (+4 / -2)" },
   neet: { marks: 4, negative_marks: 1, label: "NEET (+4 / -1)" },
+  nda: { marks: 2.5, negative_marks: 2.5 / 3, label: "NDA Maths (+2.5 / -0.83)" },
 };
 
 interface QuestionForm {
@@ -64,6 +65,10 @@ interface QuestionForm {
   correct_option: "A" | "B" | "C" | "D" | null;
   difficulty: "easy" | "medium" | "hard";
   topic: string;
+  chapter: string;
+  source_exam: string;
+  source_year: number | null;
+  source_question_number: string;
   subject: string;
   marks: number;
   negative_marks: number;
@@ -84,6 +89,10 @@ const emptyQuestion: QuestionForm = {
   correct_option: null,
   difficulty: "medium",
   topic: "",
+  chapter: "",
+  source_exam: "",
+  source_year: null,
+  source_question_number: "",
   subject: "physics",
   marks: 4,
   negative_marks: 1,
@@ -134,8 +143,9 @@ export default function CreateTest() {
         const newQs: QuestionForm[] = extracted.map((q) => ({
           ...emptyQuestion,
           ...q,
-          marks: preset?.marks ?? 4,
-          negative_marks: preset?.negative_marks ?? 1,
+          topic: q.topic || q.chapter || "",
+          marks: q.marks ?? preset?.marks ?? 4,
+          negative_marks: q.negative_marks ?? preset?.negative_marks ?? 1,
         }));
         // Replace the single empty question if user hasn't touched it
         setQuestions((prev) => {
@@ -238,6 +248,12 @@ export default function CreateTest() {
           subject: q.subject || "physics",
           difficulty: q.difficulty || "medium",
           topic: q.topic || "",
+          chapter: q.chapter || "",
+          source_exam: q.source_exam || "",
+          source_year: typeof q.source_year === "number" ? q.source_year : null,
+          source_question_number: q.source_question_number || q.question_number || "",
+          marks: typeof q.marks === "number" ? q.marks : emptyQuestion.marks,
+          negative_marks: typeof q.negative_marks === "number" ? q.negative_marks : emptyQuestion.negative_marks,
         }));
         setQuestions(prev => [...prev, ...parsed]);
         setAiText("");
@@ -300,6 +316,10 @@ export default function CreateTest() {
         correct_option: q.has_options ? q.correct_option : null,
         difficulty: q.difficulty,
         topic: q.topic || null,
+        chapter: q.chapter || null,
+        source_exam: q.source_exam || null,
+        source_year: q.source_year,
+        source_question_number: q.source_question_number || null,
         subject: q.subject,
         marks: q.marks,
         negative_marks: q.negative_marks,
@@ -412,8 +432,8 @@ export default function CreateTest() {
           <p className="text-sm text-muted-foreground mb-4">
             Choose an exam pattern — this sets the default marks &amp; negative marks for every question. You can still override per question.
           </p>
-          <div className="grid md:grid-cols-4 gap-3">
-            {(["jee_main", "jee_advanced", "neet", "custom"] as MarkingPattern[]).map((p) => {
+          <div className="grid md:grid-cols-5 gap-3">
+            {(["jee_main", "jee_advanced", "neet", "nda", "custom"] as MarkingPattern[]).map((p) => {
               const label = p === "custom" ? "Custom (per question)" : MARKING_PRESETS[p].label;
               const active = markingPattern === p;
               return (
