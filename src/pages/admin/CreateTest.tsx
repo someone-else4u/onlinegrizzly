@@ -316,6 +316,10 @@ export default function CreateTest() {
         correct_option: q.has_options ? q.correct_option : null,
         difficulty: q.difficulty,
         topic: q.topic || null,
+        chapter: q.chapter || null,
+        source_exam: q.source_exam || null,
+        source_year: q.source_year,
+        source_question_number: q.source_question_number || null,
         subject: q.subject,
         marks: q.marks,
         negative_marks: q.negative_marks,
@@ -428,8 +432,8 @@ export default function CreateTest() {
           <p className="text-sm text-muted-foreground mb-4">
             Choose an exam pattern — this sets the default marks &amp; negative marks for every question. You can still override per question.
           </p>
-          <div className="grid md:grid-cols-4 gap-3">
-            {(["jee_main", "jee_advanced", "neet", "custom"] as MarkingPattern[]).map((p) => {
+          <div className="grid md:grid-cols-5 gap-3">
+            {(["jee_main", "jee_advanced", "neet", "nda", "custom"] as MarkingPattern[]).map((p) => {
               const label = p === "custom" ? "Custom (per question)" : MARKING_PRESETS[p].label;
               const active = markingPattern === p;
               return (
