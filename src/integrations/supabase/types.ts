@@ -140,6 +140,7 @@ export type Database = {
       }
       questions: {
         Row: {
+          chapter: string | null
           correct_option: string | null
           created_at: string
           difficulty: string
@@ -156,11 +157,15 @@ export type Database = {
           option_d_image: string | null
           question_image_url: string | null
           question_text: string
+          source_exam: string | null
+          source_question_number: string | null
+          source_year: number | null
           subject: string
           test_id: string
           topic: string | null
         }
         Insert: {
+          chapter?: string | null
           correct_option?: string | null
           created_at?: string
           difficulty?: string
@@ -177,11 +182,15 @@ export type Database = {
           option_d_image?: string | null
           question_image_url?: string | null
           question_text: string
+          source_exam?: string | null
+          source_question_number?: string | null
+          source_year?: number | null
           subject?: string
           test_id: string
           topic?: string | null
         }
         Update: {
+          chapter?: string | null
           correct_option?: string | null
           created_at?: string
           difficulty?: string
@@ -198,6 +207,9 @@ export type Database = {
           option_d_image?: string | null
           question_image_url?: string | null
           question_text?: string
+          source_exam?: string | null
+          source_question_number?: string | null
+          source_year?: number | null
           subject?: string
           test_id?: string
           topic?: string | null
