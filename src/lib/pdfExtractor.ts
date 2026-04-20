@@ -20,6 +20,12 @@ export interface ExtractedQuestion {
   subject: string;
   difficulty: "easy" | "medium" | "hard";
   topic: string;
+  chapter: string;
+  source_exam: string;
+  source_year: number | null;
+  source_question_number: string;
+  marks: number | null;
+  negative_marks: number | null;
   has_options: boolean;
 }
 
@@ -133,6 +139,12 @@ export async function extractQuestionsFromPdf(
         subject: q.subject || "physics",
         difficulty: q.difficulty || "medium",
         topic: q.topic || "",
+        chapter: q.chapter || "",
+        source_exam: q.source_exam || "",
+        source_year: typeof q.source_year === "number" ? q.source_year : null,
+        source_question_number: q.question_number || "",
+        marks: typeof q.marks === "number" ? q.marks : null,
+        negative_marks: typeof q.negative_marks === "number" ? q.negative_marks : null,
         has_options,
       });
     }
