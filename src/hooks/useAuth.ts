@@ -124,11 +124,6 @@ export function useAuth() {
   };
 
   const signIn = async (email: string, password: string) => {
-    // Always force a fresh authentication — sign out any leftover session first
-    // so the password is genuinely required (prevents auto-login on shared browsers).
-    await supabase.auth.signOut().catch(() => {});
-    sessionStorage.setItem('app_session_active', '1');
-
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -144,8 +139,6 @@ export function useAuth() {
   };
 
   const signOut = async () => {
-    // Clear session tab marker so re-opening browser won't auto-sign-out loop
-    sessionStorage.removeItem('app_session_active');
     const { error } = await supabase.auth.signOut();
     if (error) {
       toast.error(error.message);
