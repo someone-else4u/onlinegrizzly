@@ -618,18 +618,20 @@ export default function CreateTest() {
                     <label className="text-sm font-medium text-foreground mb-2 block">Marks (+)</label>
                     <Input
                       type="number"
+                      step="0.01"
                       min={0}
                       value={q.marks}
-                      onChange={(e) => updateQuestion(index, 'marks', parseInt(e.target.value) || 0)}
+                      onChange={(e) => updateQuestion(index, 'marks', parseFloat(e.target.value) || 0)}
                     />
                   </div>
                   <div>
                     <label className="text-sm font-medium text-foreground mb-2 block">Negative Marks (-)</label>
                     <Input
                       type="number"
+                      step="0.01"
                       min={0}
                       value={q.negative_marks}
-                      onChange={(e) => updateQuestion(index, 'negative_marks', parseInt(e.target.value) || 0)}
+                      onChange={(e) => updateQuestion(index, 'negative_marks', parseFloat(e.target.value) || 0)}
                     />
                   </div>
                   <div className="flex items-end">
@@ -642,6 +644,49 @@ export default function CreateTest() {
                       />
                       <span className="text-sm font-medium text-foreground">Has MCQ options</span>
                     </label>
+                  </div>
+                </div>
+
+                {/* PYQ / Source metadata — used for chapterwise mock test creation */}
+                <div className="grid md:grid-cols-4 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">Chapter</label>
+                    <Input
+                      placeholder="e.g., Electrostatics"
+                      value={q.chapter}
+                      onChange={(e) => updateQuestion(index, 'chapter', e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">Source Exam</label>
+                    <Input
+                      placeholder="e.g., JEE Advanced"
+                      value={q.source_exam}
+                      onChange={(e) => updateQuestion(index, 'source_exam', e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">Year</label>
+                    <Input
+                      type="number"
+                      placeholder="e.g., 2021"
+                      value={q.source_year ?? ''}
+                      onChange={(e) =>
+                        updateQuestion(
+                          index,
+                          'source_year',
+                          e.target.value ? parseInt(e.target.value, 10) : null
+                        )
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">Original Q No.</label>
+                    <Input
+                      placeholder="e.g., 17"
+                      value={q.source_question_number}
+                      onChange={(e) => updateQuestion(index, 'source_question_number', e.target.value)}
+                    />
                   </div>
                 </div>
 
