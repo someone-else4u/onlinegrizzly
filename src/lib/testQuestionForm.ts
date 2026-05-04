@@ -118,6 +118,8 @@ export const normalizeStoredQuestion = (question: Record<string, any>): Question
     option_c_image: question.option_c_image ?? null,
     option_d_image: question.option_d_image ?? null,
     correct_option: ["A", "B", "C", "D"].includes(question.correct_option) ? question.correct_option : null,
+    correct_answer: question.correct_answer ?? "",
+    answer_tolerance: typeof question.answer_tolerance === "number" ? question.answer_tolerance : Number(question.answer_tolerance ?? 0),
     difficulty: ["easy", "medium", "hard"].includes(question.difficulty) ? question.difficulty : "medium",
     topic: question.topic ?? "",
     chapter: question.chapter ?? "",
