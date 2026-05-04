@@ -140,7 +140,9 @@ export type Database = {
       }
       questions: {
         Row: {
+          answer_tolerance: number | null
           chapter: string | null
+          correct_answer: string | null
           correct_option: string | null
           created_at: string
           difficulty: string
@@ -165,7 +167,9 @@ export type Database = {
           topic: string | null
         }
         Insert: {
+          answer_tolerance?: number | null
           chapter?: string | null
+          correct_answer?: string | null
           correct_option?: string | null
           created_at?: string
           difficulty?: string
@@ -190,7 +194,9 @@ export type Database = {
           topic?: string | null
         }
         Update: {
+          answer_tolerance?: number | null
           chapter?: string | null
+          correct_answer?: string | null
           correct_option?: string | null
           created_at?: string
           difficulty?: string

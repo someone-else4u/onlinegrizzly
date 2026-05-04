@@ -23,6 +23,8 @@ export interface QuestionForm {
   option_c_image: string | null;
   option_d_image: string | null;
   correct_option: "A" | "B" | "C" | "D" | null;
+  correct_answer: string;
+  answer_tolerance: number;
   difficulty: "easy" | "medium" | "hard";
   topic: string;
   chapter: string;
@@ -47,6 +49,8 @@ export const emptyQuestion: QuestionForm = {
   option_c_image: null,
   option_d_image: null,
   correct_option: null,
+  correct_answer: "",
+  answer_tolerance: 0,
   difficulty: "medium",
   topic: "",
   chapter: "",
@@ -114,6 +118,8 @@ export const normalizeStoredQuestion = (question: Record<string, any>): Question
     option_c_image: question.option_c_image ?? null,
     option_d_image: question.option_d_image ?? null,
     correct_option: ["A", "B", "C", "D"].includes(question.correct_option) ? question.correct_option : null,
+    correct_answer: question.correct_answer ?? "",
+    answer_tolerance: typeof question.answer_tolerance === "number" ? question.answer_tolerance : Number(question.answer_tolerance ?? 0),
     difficulty: ["easy", "medium", "hard"].includes(question.difficulty) ? question.difficulty : "medium",
     topic: question.topic ?? "",
     chapter: question.chapter ?? "",
@@ -137,6 +143,8 @@ export const toQuestionPayload = (question: QuestionForm, testId: string) => ({
   option_c: question.has_options ? question.option_c || "See image" : "N/A",
   option_d: question.has_options ? question.option_d || "See image" : "N/A",
   correct_option: question.has_options ? question.correct_option : null,
+  correct_answer: !question.has_options ? (question.correct_answer || null) : null,
+  answer_tolerance: !question.has_options ? (question.answer_tolerance || 0) : 0,
   difficulty: question.difficulty,
   topic: question.topic || null,
   chapter: question.chapter || null,
