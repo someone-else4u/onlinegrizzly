@@ -196,6 +196,25 @@ export default function ExamInterface() {
     }));
   };
 
+  const setNumericalAnswer = (value: string) => {
+    if (questions.length === 0) return;
+    const question = questions[currentQuestion];
+    const currentAnswer = answers[question.id];
+    const trimmed = value.trim();
+
+    setAnswers(prev => ({
+      ...prev,
+      [question.id]: {
+        questionId: question.id,
+        selectedOptionId: trimmed || undefined,
+        status: trimmed
+          ? (currentAnswer?.status === 'marked-for-review' ? 'answered-marked' : 'answered')
+          : 'not-answered',
+        timeSpent: currentAnswer?.timeSpent || 0,
+      },
+    }));
+  };
+
   const markForReview = () => {
     if (questions.length === 0) return;
     const question = questions[currentQuestion];
