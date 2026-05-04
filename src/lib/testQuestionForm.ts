@@ -23,6 +23,8 @@ export interface QuestionForm {
   option_c_image: string | null;
   option_d_image: string | null;
   correct_option: "A" | "B" | "C" | "D" | null;
+  correct_answer: string;
+  answer_tolerance: number;
   difficulty: "easy" | "medium" | "hard";
   topic: string;
   chapter: string;
