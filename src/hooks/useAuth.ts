@@ -13,6 +13,43 @@ interface AuthState {
   loading: boolean;
 }
 
+/**
+ * Wipe every Supabase auth artifact from this browser (sessionStorage,
+ * localStorage and cookies). Called on sign-in (to discard inherited state)
+ * and on sign-out so the next user on the same machine starts clean.
+ */
+function clearAuthStorage() {
+  if (typeof window === 'undefined') return;
+  try {
+    const wipe = (store: Storage) => {
+      const toRemove: string[] = [];
+      for (let i = 0; i < store.length; i++) {
+        const key = store.key(i);
+        if (!key) continue;
+        if (
+          key === 'grizzly-auth-session' ||
+          key.startsWith('sb-') ||
+          key.startsWith('supabase.auth.')
+        ) {
+          toRemove.push(key);
+        }
+      }
+      toRemove.forEach((k) => store.removeItem(k));
+    };
+    wipe(window.sessionStorage);
+    wipe(window.localStorage);
+    // Remove any auth cookies that may have been set
+    document.cookie.split(';').forEach((cookie) => {
+      const name = cookie.split('=')[0]?.trim();
+      if (name && (name.startsWith('sb-') || name.startsWith('supabase'))) {
+        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+      }
+    });
+  } catch {
+    /* best-effort cleanup */
+  }
+}
+
 export function useAuth() {
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
