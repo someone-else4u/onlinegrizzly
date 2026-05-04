@@ -31,7 +31,7 @@ import {
   type QuestionForm,
   emptyQuestion,
   toQuestionPayload,
-  mergeQuestionDefaults,
+  
 } from "@/lib/testQuestionForm";
 import { TestQuestionCard } from "@/components/admin/TestQuestionCard";
 
