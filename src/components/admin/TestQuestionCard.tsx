@@ -240,8 +240,32 @@ export function TestQuestionCard({
             </div>
           </>
         ) : (
-          <div className="rounded-lg border border-dashed border-border bg-muted/30 p-4 text-sm text-muted-foreground">
-            📝 No-options mode — this question will be shown without MCQ choices.
+          <div className="space-y-3 rounded-lg border border-dashed border-border bg-muted/30 p-4">
+            <p className="text-sm text-muted-foreground">📝 Numerical / subjective question — students will type their answer.</p>
+            <div className="grid gap-3 md:grid-cols-2">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-foreground">
+                  Correct Answer <span className="text-muted-foreground">(numerical or text, optional)</span>
+                </label>
+                <Input
+                  value={question.correct_answer}
+                  placeholder="e.g., 9.8 or Newton"
+                  onChange={(event) => onUpdate("correct_answer", event.target.value)}
+                />
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-foreground">
+                  Tolerance <span className="text-muted-foreground">(± for numerical)</span>
+                </label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min={0}
+                  value={question.answer_tolerance}
+                  onChange={(event) => onUpdate("answer_tolerance", parseFloat(event.target.value) || 0)}
+                />
+              </div>
+            </div>
           </div>
         )}
       </div>
