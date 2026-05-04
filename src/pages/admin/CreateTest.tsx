@@ -260,32 +260,6 @@ export default function CreateTest() {
     }
   };
 
-  const ImageUploadButton = ({ index, field, currentUrl, label }: { index: number; field: keyof QuestionForm; currentUrl: string | null; label: string }) => {
-    const key = `${index}-${field}`;
-    return (
-      <div className="relative">
-        {currentUrl ? (
-          <div className="relative group">
-            <img src={currentUrl} alt={label} className="w-full h-20 object-cover rounded-md border border-border" />
-            <button
-              onClick={() => updateQuestion(index, field, null)}
-              className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-            >×</button>
-          </div>
-        ) : (
-          <label className="flex items-center gap-2 p-2 border border-dashed border-border rounded-md cursor-pointer hover:bg-muted transition-colors text-xs text-muted-foreground">
-            {uploadingImage === key ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
-            {label}
-            <input type="file" accept="image/*" className="hidden" onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) handleImageUpload(index, field, file);
-            }} />
-          </label>
-        )}
-      </div>
-    );
-  };
-
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 bg-card border-b border-border">
