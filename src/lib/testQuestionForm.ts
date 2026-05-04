@@ -49,6 +49,8 @@ export const emptyQuestion: QuestionForm = {
   option_c_image: null,
   option_d_image: null,
   correct_option: null,
+  correct_answer: "",
+  answer_tolerance: 0,
   difficulty: "medium",
   topic: "",
   chapter: "",
