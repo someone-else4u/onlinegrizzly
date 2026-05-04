@@ -6,7 +6,6 @@ import {
   Shield, 
   ArrowLeft,
   Plus,
-  Trash2,
   Save,
   Loader2,
   CalendarIcon,
@@ -21,7 +20,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { z } from "zod";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
