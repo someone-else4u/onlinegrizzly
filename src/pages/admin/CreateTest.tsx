@@ -245,29 +245,7 @@ export default function CreateTest() {
 
       if (testError) throw testError;
 
-      const questionsToInsert = questions.map(q => ({
-        test_id: testData.id,
-        question_text: q.question_text || 'Image Question',
-        option_a: q.has_options ? (q.option_a || 'See image') : 'N/A',
-        option_b: q.has_options ? (q.option_b || 'See image') : 'N/A',
-        option_c: q.has_options ? (q.option_c || 'See image') : 'N/A',
-        option_d: q.has_options ? (q.option_d || 'See image') : 'N/A',
-        correct_option: q.has_options ? q.correct_option : null,
-        difficulty: q.difficulty,
-        topic: q.topic || null,
-        chapter: q.chapter || null,
-        source_exam: q.source_exam || null,
-        source_year: q.source_year,
-        source_question_number: q.source_question_number || null,
-        subject: q.subject,
-        marks: q.marks,
-        negative_marks: q.negative_marks,
-        question_image_url: q.question_image_url,
-        option_a_image: q.has_options ? q.option_a_image : null,
-        option_b_image: q.has_options ? q.option_b_image : null,
-        option_c_image: q.has_options ? q.option_c_image : null,
-        option_d_image: q.has_options ? q.option_d_image : null,
-      }));
+      const questionsToInsert = questions.map(q => toQuestionPayload(q, testData.id));
 
       const { error: questionsError } = await supabase.from('questions').insert(questionsToInsert);
       if (questionsError) throw questionsError;
