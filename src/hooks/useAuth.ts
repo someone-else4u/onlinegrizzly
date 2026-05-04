@@ -124,6 +124,14 @@ export function useAuth() {
   };
 
   const signIn = async (email: string, password: string) => {
+    // Always start from a clean slate so we never inherit another user's session
+    try {
+      await supabase.auth.signOut({ scope: 'local' });
+    } catch {
+      /* ignore — we're about to sign in fresh */
+    }
+    clearAuthStorage();
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -140,6 +148,18 @@ export function useAuth() {
 
   const signOut = async () => {
     const { error } = await supabase.auth.signOut({ scope: 'local' });
+
+    // Wipe every trace of the session from this device, regardless of API result
+    clearAuthStorage();
+
+    setAuthState({
+      user: null,
+      session: null,
+      role: null,
+      profile: null,
+      loading: false,
+    });
+
     if (error) {
       toast.error(error.message);
       return { error };
