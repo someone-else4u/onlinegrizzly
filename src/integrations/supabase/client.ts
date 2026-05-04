@@ -8,10 +8,21 @@ const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
+// Use sessionStorage so every browser tab keeps its own isolated session.
+// This prevents "session bleeding" where a new user on the same machine
+// (or in another tab) is auto-signed-in as the previously logged-in user.
+const authStorage =
+  typeof window !== 'undefined' && window.sessionStorage
+    ? window.sessionStorage
+    : undefined;
+
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    storage: localStorage,
+    storage: authStorage,
+    storageKey: 'grizzly-auth-session',
     persistSession: true,
     autoRefreshToken: true,
-  }
+    // Each tab gets a unique session — never share across tabs/windows
+    detectSessionInUrl: true,
+  },
 });
