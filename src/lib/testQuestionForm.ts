@@ -143,6 +143,8 @@ export const toQuestionPayload = (question: QuestionForm, testId: string) => ({
   option_c: question.has_options ? question.option_c || "See image" : "N/A",
   option_d: question.has_options ? question.option_d || "See image" : "N/A",
   correct_option: question.has_options ? question.correct_option : null,
+  correct_answer: !question.has_options ? (question.correct_answer || null) : null,
+  answer_tolerance: !question.has_options ? (question.answer_tolerance || 0) : 0,
   difficulty: question.difficulty,
   topic: question.topic || null,
   chapter: question.chapter || null,
