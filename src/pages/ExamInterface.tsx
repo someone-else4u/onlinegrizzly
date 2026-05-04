@@ -535,8 +535,22 @@ export default function ExamInterface() {
                 );
               })}
             </div> : (
-              <div className="rounded-lg border border-dashed border-border bg-muted/30 p-4 text-sm text-muted-foreground">
-                This question has no MCQ options. Review the prompt and image before submitting.
+              <div className="space-y-3">
+                <label className="block text-sm font-medium text-foreground">
+                  Your Answer
+                </label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  autoComplete="off"
+                  value={currentAnswer?.selectedOptionId ?? ''}
+                  onChange={(e) => setNumericalAnswer(e.target.value)}
+                  placeholder="Type your numerical / text answer here"
+                  className="w-full h-12 rounded-lg border border-border bg-background px-4 py-2 text-base font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Enter your final answer. For numerical questions, type only the number (e.g., 9.8).
+                </p>
               </div>
             )}
           </div>
