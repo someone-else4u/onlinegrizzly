@@ -7,6 +7,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Logo } from "@/components/Logo";
 import { z } from "zod";
+import { fetchRoleFor, hardSignOut, verifySession } from "@/lib/authSession";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -15,24 +16,33 @@ const loginSchema = z.object({
 
 export default function Login() {
   const navigate = useNavigate();
-  const { signIn, isAuthenticated, role, loading } = useAuth();
+  const { signIn } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [bootstrapping, setBootstrapping] = useState(true);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
 
+  // On mount: never auto-redirect using stale local state. Force a fresh
+  // session check; if any session exists, sign it out so the user must
+  // re-authenticate explicitly.
   useEffect(() => {
-    if (!loading && isAuthenticated && role) {
-      if (role === 'admin') {
-        navigate('/admin-dashboard');
-      } else {
-        navigate('/student-dashboard');
+    let cancelled = false;
+    (async () => {
+      const session = await verifySession();
+      if (cancelled) return;
+      if (session) {
+        await hardSignOut();
       }
-    }
-  }, [isAuthenticated, role, loading, navigate]);
+      if (!cancelled) setBootstrapping(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,12 +62,17 @@ export default function Login() {
     setIsLoading(true);
     const { error } = await signIn(formData.email, formData.password);
     if (!error) {
-      // Navigation happens via useEffect
+      // Verify the freshly created session and route by its role.
+      const session = await verifySession();
+      if (session) {
+        const role = await fetchRoleFor(session.user.id);
+        navigate(role === 'admin' ? '/admin-dashboard' : '/student-dashboard', { replace: true });
+      }
     }
     setIsLoading(false);
   };
 
-  if (loading) {
+  if (bootstrapping) {
     return (
       <div className="min-h-screen bg-gradient-hero flex items-center justify-center">
         <div className="text-primary-foreground">Loading...</div>
