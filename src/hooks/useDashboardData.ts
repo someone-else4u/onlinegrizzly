@@ -244,7 +244,7 @@ export function useStudentDashboardData(userId: string | undefined) {
         const { data: takenTests } = await supabase
           .from('submissions')
           .select('test_id')
-          .eq('user_id', userId);
+          .eq('user_id', sessionUserId);
 
         const takenTestIds = new Set(takenTests?.map((t) => t.test_id) || []);
 
