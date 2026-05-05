@@ -8,6 +8,7 @@ import {
 import { StudentSidebar } from "@/components/StudentSidebar";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { verifySession } from "@/lib/authSession";
 
 interface AnalyticsData {
   testsCompleted: number;
@@ -31,10 +32,15 @@ export default function StudentAnalytics() {
 
   const fetchAnalytics = async () => {
     try {
+      const session = await verifySession();
+      if (!session) {
+        setLoading(false);
+        return;
+      }
       const { data: submissions, error } = await supabase
         .from('submissions')
         .select('score, total_marks, correct_answers, wrong_answers, unanswered')
-        .eq('user_id', user?.id);
+        .eq('user_id', session.user.id);
 
       if (error) throw error;
 
