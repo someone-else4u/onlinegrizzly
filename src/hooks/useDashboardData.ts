@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { verifySession } from '@/lib/authSession';
 
 interface DashboardStats {
   totalTests: number;
