@@ -182,14 +182,21 @@ export function useStudentDashboardData(userId: string | undefined) {
   }, [userId]);
 
   const fetchStudentData = async () => {
-    if (!userId) return;
+    // Re-verify session at fetch time so we never read another user's data
+    // because of a stale captured `userId`.
+    const session = await verifySession();
+    if (!session || (userId && session.user.id !== userId)) {
+      setLoading(false);
+      return;
+    }
+    const sessionUserId = session.user.id;
 
     try {
       // Fetch student's submissions
       const { data: submissions } = await supabase
         .from('submissions')
         .select('*, tests(title)')
-        .eq('user_id', userId)
+        .eq('user_id', sessionUserId)
         .order('submitted_at', { ascending: false });
 
       if (submissions) {
