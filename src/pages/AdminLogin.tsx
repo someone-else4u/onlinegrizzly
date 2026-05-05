@@ -6,6 +6,8 @@ import { ArrowLeft, Eye, EyeOff, Lock } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { z } from "zod";
+import { toast } from "sonner";
+import { fetchRoleFor, hardSignOut, verifySession } from "@/lib/authSession";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -14,31 +16,36 @@ const loginSchema = z.object({
 
 export default function AdminLogin() {
   const navigate = useNavigate();
-  const { signIn, isAuthenticated, role, loading } = useAuth();
+  const { signIn } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [bootstrapping, setBootstrapping] = useState(true);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
 
-  // Redirect if already authenticated
+  // Force a clean slate on mount — never auto-redirect into a previous session.
   useEffect(() => {
-    if (!loading && isAuthenticated && role) {
-      if (role === 'admin') {
-        navigate('/admin-dashboard');
-      } else {
-        navigate('/student-dashboard');
+    let cancelled = false;
+    (async () => {
+      const session = await verifySession();
+      if (cancelled) return;
+      if (session) {
+        await hardSignOut();
       }
-    }
-  }, [isAuthenticated, role, loading, navigate]);
+      if (!cancelled) setBootstrapping(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
 
-    // Validate form
     const result = loginSchema.safeParse(formData);
     if (!result.success) {
       const fieldErrors: { email?: string; password?: string } = {};
@@ -51,17 +58,26 @@ export default function AdminLogin() {
     }
 
     setIsLoading(true);
-    
+
     const { error } = await signIn(formData.email, formData.password);
-    
+
     if (!error) {
-      // Navigation will happen via useEffect when role is fetched
+      const session = await verifySession();
+      if (session) {
+        const role = await fetchRoleFor(session.user.id);
+        if (role === 'admin') {
+          navigate('/admin-dashboard', { replace: true });
+        } else {
+          toast.error('This account does not have admin access.');
+          await hardSignOut();
+        }
+      }
     }
-    
+
     setIsLoading(false);
   };
 
-  if (loading) {
+  if (bootstrapping) {
     return (
       <div className="min-h-screen bg-gradient-hero flex items-center justify-center">
         <div className="text-primary-foreground">Loading...</div>
