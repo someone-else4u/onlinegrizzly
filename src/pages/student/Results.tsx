@@ -7,6 +7,7 @@ import {
 import { StudentSidebar } from "@/components/StudentSidebar";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { verifySession } from "@/lib/authSession";
 
 interface Result {
   id: string;
@@ -30,10 +31,17 @@ export default function StudentResults() {
 
   const fetchResults = async () => {
     try {
+      const session = await verifySession();
+      if (!session) {
+        setLoading(false);
+        return;
+      }
+      const userId = session.user.id;
+
       const { data: submissions, error } = await supabase
         .from('submissions')
         .select('id, test_id, score, total_marks, submitted_at')
-        .eq('user_id', user?.id)
+        .eq('user_id', userId)
         .order('submitted_at', { ascending: false });
 
       if (error) throw error;

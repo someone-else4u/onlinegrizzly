@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { verifySession } from '@/lib/authSession';
 
 interface DashboardStats {
   totalTests: number;
@@ -181,14 +182,21 @@ export function useStudentDashboardData(userId: string | undefined) {
   }, [userId]);
 
   const fetchStudentData = async () => {
-    if (!userId) return;
+    // Re-verify session at fetch time so we never read another user's data
+    // because of a stale captured `userId`.
+    const session = await verifySession();
+    if (!session || (userId && session.user.id !== userId)) {
+      setLoading(false);
+      return;
+    }
+    const sessionUserId = session.user.id;
 
     try {
       // Fetch student's submissions
       const { data: submissions } = await supabase
         .from('submissions')
         .select('*, tests(title)')
-        .eq('user_id', userId)
+        .eq('user_id', sessionUserId)
         .order('submitted_at', { ascending: false });
 
       if (submissions) {
@@ -236,7 +244,7 @@ export function useStudentDashboardData(userId: string | undefined) {
         const { data: takenTests } = await supabase
           .from('submissions')
           .select('test_id')
-          .eq('user_id', userId);
+          .eq('user_id', sessionUserId);
 
         const takenTestIds = new Set(takenTests?.map((t) => t.test_id) || []);
 

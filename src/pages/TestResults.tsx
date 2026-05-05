@@ -17,6 +17,7 @@ import {
 import { Link, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { verifySession } from "@/lib/authSession";
 
 interface Submission {
   id: string;
@@ -47,11 +48,16 @@ export default function TestResults() {
 
   const fetchSubmission = async () => {
     try {
+      const session = await verifySession();
+      if (!session) {
+        setLoading(false);
+        return;
+      }
       const { data, error } = await supabase
         .from('submissions')
         .select('*, tests(title, total_questions)')
         .eq('test_id', testId)
-        .eq('user_id', user?.id)
+        .eq('user_id', session.user.id)
         .maybeSingle();
 
       if (error) throw error;

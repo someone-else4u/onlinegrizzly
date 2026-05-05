@@ -10,6 +10,7 @@ import { Link } from "react-router-dom";
 import { StudentSidebar } from "@/components/StudentSidebar";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { verifySession } from "@/lib/authSession";
 
 interface Test {
   id: string;
@@ -34,6 +35,13 @@ export default function StudentTests() {
 
   const fetchTests = async () => {
     try {
+      const session = await verifySession();
+      if (!session) {
+        setLoading(false);
+        return;
+      }
+      const userId = session.user.id;
+
       // Fetch published tests
       const { data: testsData, error: testsError } = await supabase
         .from('tests')
@@ -43,11 +51,11 @@ export default function StudentTests() {
 
       if (testsError) throw testsError;
 
-      // Fetch user's submissions
+      // Fetch user's submissions (always scoped to current verified user id)
       const { data: submissions } = await supabase
         .from('submissions')
         .select('test_id')
-        .eq('user_id', user?.id);
+        .eq('user_id', userId);
 
       const completedTestIds = new Set(submissions?.map(s => s.test_id) || []);
 

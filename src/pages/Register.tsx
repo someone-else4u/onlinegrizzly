@@ -7,6 +7,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { z } from "zod";
 import { toast } from "sonner";
+import { fetchRoleFor, hardSignOut, verifySession } from "@/lib/authSession";
 
 const registerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").max(100, "Name must be less than 100 characters"),
@@ -20,9 +21,10 @@ const registerSchema = z.object({
 
 export default function Register() {
   const navigate = useNavigate();
-  const { signUp, isAuthenticated, role, loading } = useAuth();
+  const { signUp } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [bootstrapping, setBootstrapping] = useState(true);
   const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string; confirmPassword?: string }>({});
   const [formData, setFormData] = useState({
     name: "",
@@ -31,22 +33,26 @@ export default function Register() {
     confirmPassword: "",
   });
 
-  // Redirect if already authenticated
+  // Always start the registration page from a clean session.
   useEffect(() => {
-    if (!loading && isAuthenticated && role) {
-      if (role === 'admin') {
-        navigate('/admin-dashboard');
-      } else {
-        navigate('/student-dashboard');
+    let cancelled = false;
+    (async () => {
+      const session = await verifySession();
+      if (cancelled) return;
+      if (session) {
+        await hardSignOut();
       }
-    }
-  }, [isAuthenticated, role, loading, navigate]);
+      if (!cancelled) setBootstrapping(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
 
-    // Validate form
     const result = registerSchema.safeParse(formData);
     if (!result.success) {
       const fieldErrors: typeof errors = {};
@@ -59,17 +65,23 @@ export default function Register() {
     }
 
     setIsLoading(true);
-    
+
     const { error } = await signUp(formData.email, formData.password, formData.name);
-    
+
     if (!error) {
-      // Navigation will happen via useEffect when role is fetched
+      const session = await verifySession();
+      if (session) {
+        const role = await fetchRoleFor(session.user.id);
+        navigate(role === 'admin' ? '/admin-dashboard' : '/student-dashboard', { replace: true });
+      } else {
+        toast.info('Please confirm your email before signing in.');
+      }
     }
-    
+
     setIsLoading(false);
   };
 
-  if (loading) {
+  if (bootstrapping) {
     return (
       <div className="min-h-screen bg-gradient-hero flex items-center justify-center">
         <div className="text-primary-foreground">Loading...</div>
