@@ -1,7 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import {
+  clearAuthStorage,
+  fetchProfileFor,
+  fetchRoleFor,
+  hardSignOut,
+  verifySession,
+} from '@/lib/authSession';
 
 export type UserRole = 'admin' | 'student';
 
@@ -13,43 +20,6 @@ interface AuthState {
   loading: boolean;
 }
 
-/**
- * Wipe every Supabase auth artifact from this browser (sessionStorage,
- * localStorage and cookies). Called on sign-in (to discard inherited state)
- * and on sign-out so the next user on the same machine starts clean.
- */
-function clearAuthStorage() {
-  if (typeof window === 'undefined') return;
-  try {
-    const wipe = (store: Storage) => {
-      const toRemove: string[] = [];
-      for (let i = 0; i < store.length; i++) {
-        const key = store.key(i);
-        if (!key) continue;
-        if (
-          key === 'grizzly-auth-session' ||
-          key.startsWith('sb-') ||
-          key.startsWith('supabase.auth.')
-        ) {
-          toRemove.push(key);
-        }
-      }
-      toRemove.forEach((k) => store.removeItem(k));
-    };
-    wipe(window.sessionStorage);
-    wipe(window.localStorage);
-    // Remove any auth cookies that may have been set
-    document.cookie.split(';').forEach((cookie) => {
-      const name = cookie.split('=')[0]?.trim();
-      if (name && (name.startsWith('sb-') || name.startsWith('supabase'))) {
-        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
-      }
-    });
-  } catch {
-    /* best-effort cleanup */
-  }
-}
-
 export function useAuth() {
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
@@ -59,81 +29,80 @@ export function useAuth() {
     loading: true,
   });
 
-  useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setAuthState(prev => ({
-          ...prev,
-          session,
-          user: session?.user ?? null,
-        }));
+  // Track which user id we are currently resolving so a stale async
+  // role/profile fetch can never overwrite state for a different user.
+  const activeUserIdRef = useRef<string | null>(null);
 
-        // Defer fetching role and profile
-        if (session?.user) {
-          setTimeout(() => {
-            fetchUserData(session.user.id);
-          }, 0);
-        } else {
-          setAuthState(prev => ({
-            ...prev,
-            role: null,
-            profile: null,
-            loading: false,
-          }));
-        }
+  useEffect(() => {
+    let cancelled = false;
+
+    const applySession = async (session: Session | null) => {
+      // Always verify against the auth API rather than trusting whatever
+      // the listener handed us; this prevents stale tokens from being treated
+      // as authenticated.
+      const verified = session?.user?.id ? await verifySession() : null;
+
+      if (cancelled) return;
+
+      if (!verified) {
+        activeUserIdRef.current = null;
+        setAuthState({
+          user: null,
+          session: null,
+          role: null,
+          profile: null,
+          loading: false,
+        });
+        return;
+      }
+
+      activeUserIdRef.current = verified.user.id;
+
+      // While role/profile load, mark loading=true so guards wait.
+      setAuthState({
+        user: verified.user,
+        session: verified,
+        role: null,
+        profile: null,
+        loading: true,
+      });
+
+      const [role, profile] = await Promise.all([
+        fetchRoleFor(verified.user.id),
+        fetchProfileFor(verified.user.id),
+      ]);
+
+      // Drop the result if the active user changed in the meantime.
+      if (cancelled || activeUserIdRef.current !== verified.user.id) return;
+
+      setAuthState({
+        user: verified.user,
+        session: verified,
+        role: role ?? 'student',
+        profile: profile ?? null,
+        loading: false,
+      });
+    };
+
+    // Set up listener FIRST so we never miss an event.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        // Defer the supabase call out of the listener callback to avoid
+        // the documented deadlock when calling supabase APIs synchronously.
+        setTimeout(() => {
+          applySession(session);
+        }, 0);
       }
     );
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setAuthState(prev => ({
-        ...prev,
-        session,
-        user: session?.user ?? null,
-      }));
+    // THEN trigger an initial verification.
+    applySession(null /* will be replaced by verifySession() inside */);
 
-      if (session?.user) {
-        fetchUserData(session.user.id);
-      } else {
-        setAuthState(prev => ({ ...prev, loading: false }));
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, []);
-
-  const fetchUserData = async (userId: string) => {
-    try {
-      // Fetch role
-      const { data: roleData, error: roleError } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      if (roleError) throw roleError;
-
-      // Fetch profile
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('name, email')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      if (profileError) throw profileError;
-
-      setAuthState(prev => ({
-        ...prev,
-        role: roleData?.role as UserRole ?? 'student',
-        profile: profileData ?? null,
-        loading: false,
-      }));
-    } catch (error) {
-      console.error('Error fetching user data:', error);
-      setAuthState(prev => ({ ...prev, loading: false }));
-    }
-  };
 
   const signUp = async (email: string, password: string, name: string) => {
     const redirectUrl = `${window.location.origin}/`;
@@ -161,13 +130,8 @@ export function useAuth() {
   };
 
   const signIn = async (email: string, password: string) => {
-    // Always start from a clean slate so we never inherit another user's session
-    try {
-      await supabase.auth.signOut({ scope: 'local' });
-    } catch {
-      /* ignore — we're about to sign in fresh */
-    }
-    clearAuthStorage();
+    // Always start from a clean slate so we never inherit another user's session.
+    await hardSignOut();
 
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -184,9 +148,8 @@ export function useAuth() {
   };
 
   const signOut = async () => {
+    activeUserIdRef.current = null;
     const { error } = await supabase.auth.signOut({ scope: 'local' });
-
-    // Wipe every trace of the session from this device, regardless of API result
     clearAuthStorage();
 
     setAuthState({
@@ -210,7 +173,7 @@ export function useAuth() {
     signUp,
     signIn,
     signOut,
-    isAuthenticated: !!authState.user,
+    isAuthenticated: !!authState.user && !!authState.session,
     isAdmin: authState.role === 'admin',
     isStudent: authState.role === 'student',
   };
