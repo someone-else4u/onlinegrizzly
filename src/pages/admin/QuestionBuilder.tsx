@@ -1,61 +1,35 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { 
+import { Textarea } from "@/components/ui/textarea";
+import {
   ArrowLeft,
   Plus,
-  Trash2,
   Save,
   Loader2,
   Image as ImageIcon,
   GripVertical,
-  Check
+  Check,
+  Upload,
+  FileText,
+  Wand2,
+  Sparkles,
 } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Logo } from "@/components/Logo";
-
-const SUBJECTS = ['physics', 'chemistry', 'mathematics', 'biology'] as const;
-
-interface Question {
-  id?: string;
-  question_text: string;
-  option_a: string;
-  option_b: string;
-  option_c: string;
-  option_d: string;
-  correct_option: "A" | "B" | "C" | "D" | null;
-  difficulty: "easy" | "medium" | "hard";
-  topic: string;
-  subject: string;
-  marks: number;
-  negative_marks: number;
-  question_image_url: string | null;
-  option_a_image: string | null;
-  option_b_image: string | null;
-  option_c_image: string | null;
-  option_d_image: string | null;
-}
-
-const emptyQuestion: Question = {
-  question_text: "",
-  option_a: "",
-  option_b: "",
-  option_c: "",
-  option_d: "",
-  correct_option: null,
-  difficulty: "medium",
-  topic: "",
-  subject: "physics",
-  marks: 4,
-  negative_marks: 1,
-  question_image_url: null,
-  option_a_image: null,
-  option_b_image: null,
-  option_c_image: null,
-  option_d_image: null,
-};
+import { TestQuestionCard } from "@/components/admin/TestQuestionCard";
+import {
+  MARKING_PRESETS,
+  emptyQuestion,
+  mergeQuestionDefaults,
+  normalizeStoredQuestion,
+  toQuestionPayload,
+  type MarkingPattern,
+  type QuestionForm,
+} from "@/lib/testQuestionForm";
+import { extractQuestionsFromPdf } from "@/lib/pdfExtractor";
+import { cn } from "@/lib/utils";
 
 export default function QuestionBuilder() {
   const { testId } = useParams();
@@ -63,48 +37,44 @@ export default function QuestionBuilder() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testTitle, setTestTitle] = useState("");
-  const [questions, setQuestions] = useState<Question[]>([]);
+  const [questions, setQuestions] = useState<QuestionForm[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [uploadingImage, setUploadingImage] = useState<string | null>(null);
+  const [markingPattern, setMarkingPattern] = useState<MarkingPattern>("custom");
+  const [aiText, setAiText] = useState("");
+  const [aiImageBase64, setAiImageBase64] = useState<string | null>(null);
+  const [aiParsing, setAiParsing] = useState(false);
+  const [pdfParsing, setPdfParsing] = useState(false);
+  const [pdfProgress, setPdfProgress] = useState<{ page: number; total: number } | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       if (!testId) return;
 
-      // Fetch test info
       const { data: testData, error: testError } = await supabase
-        .from('tests')
-        .select('title')
-        .eq('id', testId)
+        .from("tests")
+        .select("title")
+        .eq("id", testId)
         .single();
 
       if (testError) {
-        toast.error('Test not found');
-        navigate('/admin/tests');
+        toast.error("Test not found");
+        navigate("/admin/tests");
         return;
       }
 
       setTestTitle(testData.title);
 
-      // Fetch existing questions
       const { data: questionsData, error: questionsError } = await supabase
-        .from('questions')
-        .select('*')
-        .eq('test_id', testId)
-        .order('created_at', { ascending: true });
+        .from("questions")
+        .select("*")
+        .eq("test_id", testId)
+        .order("created_at", { ascending: true });
 
       if (questionsError) {
-        console.error('Error fetching questions:', questionsError);
+        console.error("Error fetching questions:", questionsError);
       } else if (questionsData && questionsData.length > 0) {
-        setQuestions(questionsData.map(q => ({
-          ...q,
-          correct_option: (q.correct_option as "A" | "B" | "C" | "D" | null) ?? null,
-          difficulty: q.difficulty as "easy" | "medium" | "hard",
-          subject: (q as any).subject || 'physics',
-          option_a_image: (q as any).option_a_image || null,
-          option_b_image: (q as any).option_b_image || null,
-          option_c_image: (q as any).option_c_image || null,
-          option_d_image: (q as any).option_d_image || null,
-        })));
+        setQuestions(questionsData.map(normalizeStoredQuestion));
       }
 
       setLoading(false);
@@ -114,116 +84,176 @@ export default function QuestionBuilder() {
   }, [testId, navigate]);
 
   const addQuestion = () => {
-    setQuestions([...questions, { ...emptyQuestion }]);
+    const preset = markingPattern === "custom" ? null : MARKING_PRESETS[markingPattern];
+    const newQ: QuestionForm = {
+      ...emptyQuestion,
+      marks: preset?.marks ?? emptyQuestion.marks,
+      negative_marks: preset?.negative_marks ?? emptyQuestion.negative_marks,
+    };
+    setQuestions((prev) => [...prev, newQ]);
     setSelectedIndex(questions.length);
   };
 
   const removeQuestion = async (index: number) => {
     const question = questions[index];
-    
+    if (!window.confirm("Delete this question?")) return;
+
     if (question.id) {
-      const { error } = await supabase
-        .from('questions')
-        .delete()
-        .eq('id', question.id);
-      
+      const { error } = await supabase.from("questions").delete().eq("id", question.id);
       if (error) {
-        toast.error('Failed to delete question');
+        toast.error("Failed to delete question");
         return;
       }
     }
-    
-    const updated = questions.filter((_, i) => i !== index);
-    setQuestions(updated);
+
+    setQuestions((prev) => prev.filter((_, i) => i !== index));
     setSelectedIndex(null);
-    toast.success('Question deleted');
+    toast.success("Question deleted");
   };
 
-  const updateQuestion = (index: number, field: keyof Question, value: any) => {
-    const updated = [...questions];
-    updated[index] = { ...updated[index], [field]: value };
-    setQuestions(updated);
+  const updateQuestion = <K extends keyof QuestionForm>(index: number, field: K, value: QuestionForm[K]) => {
+    setQuestions((prev) => prev.map((q, i) => (i === index ? { ...q, [field]: value } : q)));
+  };
+
+  const uploadImage = async (file: File, path: string): Promise<string | null> => {
+    const ext = file.name.split(".").pop();
+    const fileName = `${path}/${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("question-images").upload(fileName, file);
+    if (error) {
+      toast.error("Failed to upload image");
+      return null;
+    }
+    const { data } = supabase.storage.from("question-images").getPublicUrl(fileName);
+    return data.publicUrl;
+  };
+
+  const handleImageUpload = async (index: number, field: keyof QuestionForm, file: File) => {
+    const key = `${index}-${field}`;
+    setUploadingImage(key);
+    const url = await uploadImage(file, `qbuilder/${testId}/q${index}`);
+    if (url) updateQuestion(index, field, url as QuestionForm[keyof QuestionForm]);
+    setUploadingImage(null);
+  };
+
+  const applyMarkingPatternToAll = (pattern: MarkingPattern) => {
+    setMarkingPattern(pattern);
+    if (pattern === "custom") return;
+    const preset = MARKING_PRESETS[pattern];
+    setQuestions((prev) => prev.map((q) => ({ ...q, marks: preset.marks, negative_marks: preset.negative_marks })));
+  };
+
+  const appendQuestions = (incoming: Partial<QuestionForm>[]) => {
+    setQuestions((prev) => [...prev, ...incoming.map((q) => mergeQuestionDefaults(q, markingPattern))]);
+  };
+
+  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (file.type !== "application/pdf") {
+      toast.error("Please upload a PDF file");
+      return;
+    }
+    setPdfParsing(true);
+    setPdfProgress({ page: 0, total: 0 });
+    try {
+      toast.info("Extracting questions from PDF — this may take a minute…");
+      const extracted = await extractQuestionsFromPdf(file, (page, total) => setPdfProgress({ page, total }));
+      if (extracted.length === 0) {
+        toast.error("AI couldn't find any questions in this PDF");
+      } else {
+        appendQuestions(extracted);
+        toast.success(`Extracted ${extracted.length} question(s) from PDF!`);
+      }
+    } catch (err: any) {
+      console.error("PDF parse error:", err);
+      toast.error(err.message || "Failed to parse PDF");
+    } finally {
+      setPdfParsing(false);
+      setPdfProgress(null);
+    }
+  };
+
+  const handleAiImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setAiImageBase64(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const handleAiParse = async () => {
+    if (!aiText.trim() && !aiImageBase64) {
+      toast.error("Please enter text or upload an image for AI to parse");
+      return;
+    }
+    setAiParsing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("parse-questions", {
+        body: { text: aiText.trim() || undefined, imageBase64: aiImageBase64 || undefined },
+      });
+      if (error) throw error;
+      if (!data?.questions?.length) {
+        toast.error("AI couldn't extract any questions from the input");
+        return;
+      }
+      appendQuestions(
+        data.questions.map((q: any) => ({
+          question_text: q.question_text || "",
+          option_a: q.option_a || "",
+          option_b: q.option_b || "",
+          option_c: q.option_c || "",
+          option_d: q.option_d || "",
+          correct_option: ["A", "B", "C", "D"].includes(q.correct_option) ? q.correct_option : null,
+          subject: q.subject || "physics",
+          difficulty: q.difficulty || "medium",
+          topic: q.topic || "",
+          chapter: q.chapter || "",
+          source_exam: q.source_exam || "",
+          source_year: typeof q.source_year === "number" ? q.source_year : null,
+          source_question_number: q.source_question_number || q.question_number || "",
+          marks: typeof q.marks === "number" ? q.marks : undefined,
+          negative_marks: typeof q.negative_marks === "number" ? q.negative_marks : undefined,
+          has_options: Boolean(q.option_a || q.option_b || q.option_c || q.option_d),
+          correct_answer: q.correct_answer || "",
+          answer_tolerance: typeof q.answer_tolerance === "number" ? q.answer_tolerance : 0,
+        }))
+      );
+      setAiText("");
+      setAiImageBase64(null);
+      toast.success(`AI extracted ${data.questions.length} question(s)!`);
+    } catch (e: any) {
+      console.error("AI parse error:", e);
+      toast.error(e.message || "Failed to parse questions with AI");
+    } finally {
+      setAiParsing(false);
+    }
   };
 
   const saveQuestion = async (index: number) => {
     const question = questions[index];
-    
-    if (!question.question_text.trim()) {
-      toast.error('Question text is required');
-      return;
-    }
-
-    if (!question.option_a || !question.option_b || !question.option_c || !question.option_d) {
-      toast.error('All options are required');
+    if (!question.question_text.trim() && !question.question_image_url) {
+      toast.error("Question text or image is required");
       return;
     }
 
     setSaving(true);
-
     try {
+      const payload = toQuestionPayload(question, testId!);
       if (question.id) {
-        // Update existing question
-        const { error } = await supabase
-          .from('questions')
-          .update({
-            question_text: question.question_text,
-            option_a: question.option_a,
-            option_b: question.option_b,
-            option_c: question.option_c,
-            option_d: question.option_d,
-            correct_option: question.correct_option,
-            difficulty: question.difficulty,
-            topic: question.topic || null,
-            subject: question.subject,
-            marks: question.marks,
-            negative_marks: question.negative_marks,
-            question_image_url: question.question_image_url,
-          })
-          .eq('id', question.id);
-
+        const { error } = await supabase.from("questions").update(payload).eq("id", question.id);
         if (error) throw error;
-        toast.success('Question updated');
+        toast.success("Question updated");
       } else {
-        // Create new question
-        const { data, error } = await supabase
-          .from('questions')
-          .insert({
-            test_id: testId,
-            question_text: question.question_text,
-            option_a: question.option_a,
-            option_b: question.option_b,
-            option_c: question.option_c,
-            option_d: question.option_d,
-            correct_option: question.correct_option,
-            difficulty: question.difficulty,
-            topic: question.topic || null,
-            subject: question.subject,
-            marks: question.marks,
-            negative_marks: question.negative_marks,
-            question_image_url: question.question_image_url,
-          })
-          .select()
-          .single();
-
+        const { data, error } = await supabase.from("questions").insert(payload).select().single();
         if (error) throw error;
-
-        // Update local state with new ID
-        const updated = [...questions];
-        updated[index] = { ...updated[index], id: data.id };
-        setQuestions(updated);
-        
-        toast.success('Question added');
+        setQuestions((prev) => prev.map((q, i) => (i === index ? { ...q, id: data.id } : q)));
+        toast.success("Question added");
       }
-
-      // Update test total_questions count
-      await supabase
-        .from('tests')
-        .update({ total_questions: questions.length })
-        .eq('id', testId);
-
+      await supabase.from("tests").update({ total_questions: questions.length }).eq("id", testId);
     } catch (error: any) {
-      console.error('Error saving question:', error);
-      toast.error(error.message || 'Failed to save question');
+      console.error("Error saving question:", error);
+      toast.error(error.message || "Failed to save question");
     } finally {
       setSaving(false);
     }
@@ -232,64 +262,29 @@ export default function QuestionBuilder() {
   const saveAllQuestions = async () => {
     setSaving(true);
     let successCount = 0;
+    const updated = [...questions];
 
-    for (let i = 0; i < questions.length; i++) {
-      const question = questions[i];
-      if (!question.question_text.trim()) continue;
-
+    for (let i = 0; i < updated.length; i++) {
+      const q = updated[i];
+      if (!q.question_text.trim() && !q.question_image_url) continue;
       try {
-        if (question.id) {
-          await supabase
-            .from('questions')
-            .update({
-              question_text: question.question_text,
-              option_a: question.option_a,
-              option_b: question.option_b,
-              option_c: question.option_c,
-              option_d: question.option_d,
-              correct_option: question.correct_option,
-              difficulty: question.difficulty,
-              topic: question.topic || null,
-              subject: question.subject,
-              marks: question.marks,
-              negative_marks: question.negative_marks,
-            })
-            .eq('id', question.id);
+        const payload = toQuestionPayload(q, testId!);
+        if (q.id) {
+          const { error } = await supabase.from("questions").update(payload).eq("id", q.id);
+          if (error) throw error;
         } else {
-          const { data } = await supabase
-            .from('questions')
-            .insert({
-              test_id: testId,
-              question_text: question.question_text,
-              option_a: question.option_a,
-              option_b: question.option_b,
-              option_c: question.option_c,
-              option_d: question.option_d,
-              correct_option: question.correct_option,
-              difficulty: question.difficulty,
-              topic: question.topic || null,
-              subject: question.subject,
-              marks: question.marks,
-              negative_marks: question.negative_marks,
-            })
-            .select()
-            .single();
-
-          if (data) {
-            questions[i].id = data.id;
-          }
+          const { data, error } = await supabase.from("questions").insert(payload).select().single();
+          if (error) throw error;
+          if (data) updated[i] = { ...q, id: data.id };
         }
         successCount++;
-      } catch (error) {
-        console.error(`Error saving question ${i + 1}:`, error);
+      } catch (err) {
+        console.error(`Error saving question ${i + 1}:`, err);
       }
     }
 
-    await supabase
-      .from('tests')
-      .update({ total_questions: questions.length })
-      .eq('id', testId);
-
+    setQuestions(updated);
+    await supabase.from("tests").update({ total_questions: updated.length }).eq("id", testId);
     setSaving(false);
     toast.success(`Saved ${successCount} questions`);
   };
@@ -306,7 +301,6 @@ export default function QuestionBuilder() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="sticky top-0 z-50 bg-card border-b border-border">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -330,7 +324,7 @@ export default function QuestionBuilder() {
       </header>
 
       <div className="flex h-[calc(100vh-73px)]">
-        {/* Questions List Sidebar */}
+        {/* Sidebar */}
         <div className="w-72 bg-card border-r border-border flex flex-col">
           <div className="p-4 border-b border-border">
             <Button variant="accent" className="w-full" onClick={addQuestion}>
@@ -338,44 +332,47 @@ export default function QuestionBuilder() {
               Add Question
             </Button>
           </div>
-          
+
           <div className="flex-1 overflow-auto p-2">
             {questions.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <p className="text-sm">No questions yet</p>
-                <p className="text-xs">Click "Add Question" to start</p>
+                <p className="text-xs">Add manually, paste with AI, or upload a PDF</p>
               </div>
             ) : (
               <div className="space-y-1">
                 {questions.map((q, index) => (
                   <button
-                    key={index}
+                    key={q.id ?? `new-${index}`}
                     onClick={() => setSelectedIndex(index)}
                     className={`w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors ${
-                      selectedIndex === index
-                        ? 'bg-primary text-primary-foreground'
-                        : 'hover:bg-muted'
+                      selectedIndex === index ? "bg-primary text-primary-foreground" : "hover:bg-muted"
                     }`}
                   >
                     <GripVertical className="w-4 h-4 opacity-50" />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="font-medium">Q{index + 1}</span>
-                        {q.id && (
-                          <Check className="w-3 h-3 text-success" />
+                        {q.id && <Check className="w-3 h-3 text-success" />}
+                        {!q.has_options && (
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded ${selectedIndex === index ? "bg-primary-foreground/20" : "bg-muted-foreground/20"}`}>
+                            NUM
+                          </span>
                         )}
                       </div>
-                      <p className={`text-xs truncate ${
-                        selectedIndex === index ? 'text-primary-foreground/70' : 'text-muted-foreground'
-                      }`}>
-                        {q.question_text || 'No text yet...'}
+                      <p className={`text-xs truncate ${selectedIndex === index ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                        {q.question_text || "No text yet..."}
                       </p>
                     </div>
-                    <span className={`text-xs px-2 py-0.5 rounded ${
-                      q.difficulty === 'easy' ? 'bg-success/20 text-success' :
-                      q.difficulty === 'hard' ? 'bg-destructive/20 text-destructive' :
-                      'bg-warning/20 text-warning'
-                    }`}>
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded ${
+                        q.difficulty === "easy"
+                          ? "bg-success/20 text-success"
+                          : q.difficulty === "hard"
+                          ? "bg-destructive/20 text-destructive"
+                          : "bg-warning/20 text-warning"
+                      }`}
+                    >
                       {q.difficulty}
                     </span>
                   </button>
@@ -383,28 +380,123 @@ export default function QuestionBuilder() {
               </div>
             )}
           </div>
-          
+
           <div className="p-4 border-t border-border bg-muted/50">
-            <p className="text-sm text-muted-foreground text-center">
-              Total: {questions.length} questions
-            </p>
+            <p className="text-sm text-muted-foreground text-center">Total: {questions.length} questions</p>
           </div>
         </div>
 
-        {/* Question Editor */}
+        {/* Editor area */}
         <div className="flex-1 overflow-auto p-6">
-          {selectedQuestion === null ? (
-            <div className="h-full flex items-center justify-center">
-              <div className="text-center">
+          <div className="max-w-4xl mx-auto space-y-6">
+            {/* Marking pattern */}
+            <div className="bg-card rounded-xl border border-border p-5">
+              <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                <div>
+                  <h2 className="font-display font-semibold text-foreground">Marking Pattern</h2>
+                  <p className="text-xs text-muted-foreground">Applies to all questions; override per question if needed.</p>
+                </div>
+              </div>
+              <div className="grid md:grid-cols-5 gap-2">
+                {(["jee_main", "jee_advanced", "neet", "nda", "custom"] as MarkingPattern[]).map((p) => {
+                  const label = p === "custom" ? "Custom" : MARKING_PRESETS[p].label;
+                  const active = markingPattern === p;
+                  return (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => applyMarkingPatternToAll(p)}
+                      className={cn(
+                        "rounded-lg border p-2 text-xs text-left transition-colors",
+                        active
+                          ? "border-primary bg-primary/5 text-foreground ring-2 ring-primary/30"
+                          : "border-border hover:border-primary/50 text-muted-foreground"
+                      )}
+                    >
+                      <div className="font-medium text-foreground">{label}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* PDF Importer */}
+            <div className="bg-card rounded-xl border-2 border-dashed border-accent/40 p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <FileText className="w-5 h-5 text-accent" />
+                <h2 className="font-display font-semibold text-foreground">Import Past Exam PDF</h2>
+                <span className="text-xs bg-accent/10 text-accent px-2 py-0.5 rounded-full font-medium">AI</span>
+              </div>
+              <p className="text-sm text-muted-foreground mb-3">
+                Upload a previous JEE / NEET paper. AI extracts every question, math, and diagrams automatically.
+              </p>
+              <div className="flex items-center gap-4 flex-wrap">
+                <label
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-2 border border-border rounded-lg text-sm transition-colors",
+                    pdfParsing ? "opacity-60 cursor-not-allowed" : "cursor-pointer hover:bg-muted"
+                  )}
+                >
+                  {pdfParsing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                  {pdfParsing ? "Processing PDF…" : "Upload PDF"}
+                  <input type="file" accept="application/pdf" className="hidden" disabled={pdfParsing} onChange={handlePdfUpload} />
+                </label>
+                {pdfProgress && pdfProgress.total > 0 && (
+                  <span className="text-xs text-muted-foreground">
+                    Page {pdfProgress.page} of {pdfProgress.total}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* AI Parser */}
+            <div className="bg-card rounded-xl border-2 border-dashed border-primary/30 p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <Wand2 className="w-5 h-5 text-primary" />
+                <h2 className="font-display font-semibold text-foreground">AI Question Parser</h2>
+                <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">Beta</span>
+              </div>
+              <p className="text-sm text-muted-foreground mb-3">
+                Paste questions or upload an image — AI formats them automatically.
+              </p>
+              <div className="space-y-3">
+                <Textarea
+                  placeholder="Paste your questions here..."
+                  value={aiText}
+                  onChange={(e) => setAiText(e.target.value)}
+                  className="min-h-[100px]"
+                />
+                <div className="flex items-center gap-3 flex-wrap">
+                  <label className="flex items-center gap-2 px-3 py-2 border border-border rounded-lg cursor-pointer hover:bg-muted transition-colors text-sm text-muted-foreground">
+                    <ImageIcon className="w-4 h-4" />
+                    {aiImageBase64 ? "Image uploaded ✓" : "Upload question image"}
+                    <input type="file" accept="image/*" className="hidden" onChange={handleAiImageUpload} />
+                  </label>
+                  {aiImageBase64 && (
+                    <button onClick={() => setAiImageBase64(null)} className="text-xs text-destructive hover:underline">
+                      Remove image
+                    </button>
+                  )}
+                  <div className="flex-1" />
+                  <Button onClick={handleAiParse} disabled={aiParsing || (!aiText.trim() && !aiImageBase64)} className="gap-2">
+                    {aiParsing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                    {aiParsing ? "Parsing..." : "Extract Questions with AI"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Selected question editor */}
+            {selectedQuestion === null ? (
+              <div className="bg-card rounded-xl border border-border p-12 text-center">
                 <ImageIcon className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-foreground mb-2">
-                  {questions.length === 0 ? 'Start building your test' : 'Select a question'}
+                  {questions.length === 0 ? "Start building your test" : "Select a question to edit"}
                 </h3>
                 <p className="text-muted-foreground mb-4">
-                  {questions.length === 0 
-                    ? 'Add your first question to begin'
-                    : 'Click on a question from the sidebar to edit it'
-                  }
+                  {questions.length === 0
+                    ? "Add manually, paste with AI, or upload a past-paper PDF"
+                    : "Click a question from the sidebar to edit its details"}
                 </p>
                 {questions.length === 0 && (
                   <Button variant="accent" onClick={addQuestion}>
@@ -413,144 +505,27 @@ export default function QuestionBuilder() {
                   </Button>
                 )}
               </div>
-            </div>
-          ) : (
-            <div className="max-w-3xl mx-auto space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-display font-semibold text-foreground">
-                  Question {selectedIndex! + 1}
-                </h2>
-                <div className="flex items-center gap-2">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => saveQuestion(selectedIndex!)}
-                    disabled={saving}
-                  >
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-end gap-2">
+                  <Button variant="outline" onClick={() => saveQuestion(selectedIndex!)} disabled={saving}>
                     {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
                     Save Question
                   </Button>
-                  <Button 
-                    variant="ghost" 
-                    className="text-destructive"
-                    onClick={() => removeQuestion(selectedIndex!)}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-
-              {/* Question Text */}
-              <div className="bg-card rounded-xl border border-border p-6 space-y-4">
-                <div>
-                  <label className="text-sm font-medium text-foreground mb-2 block">Question Text *</label>
-                  <textarea
-                    className="w-full min-h-[120px] rounded-md border border-input bg-background px-3 py-2 text-sm resize-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                    placeholder="Enter your question here..."
-                    value={selectedQuestion.question_text}
-                    onChange={(e) => updateQuestion(selectedIndex!, 'question_text', e.target.value)}
-                  />
                 </div>
 
-                <div className="grid grid-cols-4 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">Subject</label>
-                    <select
-                      value={selectedQuestion.subject}
-                      onChange={(e) => updateQuestion(selectedIndex!, 'subject', e.target.value)}
-                      className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-ring"
-                    >
-                      {SUBJECTS.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">Topic</label>
-                    <Input
-                      placeholder="e.g., Kinematics"
-                      value={selectedQuestion.topic}
-                      onChange={(e) => updateQuestion(selectedIndex!, 'topic', e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">Difficulty</label>
-                    <select
-                      value={selectedQuestion.difficulty}
-                      onChange={(e) => updateQuestion(selectedIndex!, 'difficulty', e.target.value)}
-                      className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-ring"
-                    >
-                      <option value="easy">Easy</option>
-                      <option value="medium">Medium</option>
-                      <option value="hard">Hard</option>
-                    </select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="text-sm font-medium text-foreground mb-2 block">Marks</label>
-                      <Input
-                        type="number"
-                        min={1}
-                        value={selectedQuestion.marks}
-                        onChange={(e) => updateQuestion(selectedIndex!, 'marks', parseInt(e.target.value) || 1)}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-foreground mb-2 block">Negative</label>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={selectedQuestion.negative_marks}
-                        onChange={(e) => updateQuestion(selectedIndex!, 'negative_marks', parseInt(e.target.value) || 0)}
-                      />
-                    </div>
-                  </div>
-                </div>
+                <TestQuestionCard
+                  question={selectedQuestion}
+                  index={selectedIndex!}
+                  canRemove
+                  uploadingImage={uploadingImage}
+                  onUpdate={(field, value) => updateQuestion(selectedIndex!, field, value)}
+                  onRemove={() => removeQuestion(selectedIndex!)}
+                  onImageUpload={(field, file) => handleImageUpload(selectedIndex!, field, file)}
+                />
               </div>
-
-              {/* Options */}
-              <div className="bg-card rounded-xl border border-border p-6 space-y-4">
-                <h3 className="font-medium text-foreground">Answer Options</h3>
-                
-                <div className="grid gap-3">
-                  {(['A', 'B', 'C', 'D'] as const).map((option) => {
-                    const fieldName = `option_${option.toLowerCase()}` as keyof Question;
-                    const isCorrect = selectedQuestion.correct_option === option;
-                    
-                    return (
-                      <div
-                        key={option}
-                        className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-colors ${
-                          isCorrect 
-                            ? 'border-success bg-success/5' 
-                            : 'border-border hover:border-muted-foreground/30'
-                        }`}
-                      >
-                        <button
-                          onClick={() => updateQuestion(selectedIndex!, 'correct_option', selectedQuestion.correct_option === option ? null : option)}
-                          className={`w-8 h-8 rounded-full flex items-center justify-center font-medium transition-colors ${
-                            isCorrect
-                              ? 'bg-success text-success-foreground'
-                              : 'bg-muted text-muted-foreground hover:bg-muted-foreground hover:text-background'
-                          }`}
-                        >
-                          {option}
-                        </button>
-                        <Input
-                          className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
-                          placeholder={`Option ${option}`}
-                          value={selectedQuestion[fieldName] as string}
-                          onChange={(e) => updateQuestion(selectedIndex!, fieldName, e.target.value)}
-                        />
-                        {isCorrect && (
-                          <span className="text-xs font-medium text-success px-2 py-1 bg-success/10 rounded">
-                            Correct
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>
