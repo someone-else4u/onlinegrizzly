@@ -191,6 +191,9 @@ export default function CreateTest() {
           source_question_number: q.source_question_number || q.question_number || "",
           marks: typeof q.marks === "number" ? q.marks : emptyQuestion.marks,
           negative_marks: typeof q.negative_marks === "number" ? q.negative_marks : emptyQuestion.negative_marks,
+          has_options: Boolean(q.option_a || q.option_b || q.option_c || q.option_d),
+          correct_answer: q.correct_answer || "",
+          answer_tolerance: typeof q.answer_tolerance === "number" ? q.answer_tolerance : 0,
         }));
         setQuestions(prev => [...prev, ...parsed]);
         setAiText("");
