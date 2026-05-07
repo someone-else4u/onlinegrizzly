@@ -11,13 +11,14 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { Logo } from "@/components/Logo";
+import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 
 const sidebarItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/student-dashboard' },
   { icon: FileText, label: 'Tests', path: '/student/tests' },
   { icon: Trophy, label: 'Results', path: '/student/results' },
   { icon: BarChart3, label: 'Analytics', path: '/student/analytics' },
-  { icon: MessageSquare, label: 'Messages', path: '/student/messages' },
+  { icon: MessageSquare, label: 'Messages', path: '/student/messages', badge: 'unread' as const },
   { icon: Settings, label: 'Settings', path: '/student/settings' },
 ];
 
@@ -25,6 +26,7 @@ export function StudentSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { signOut, profile } = useAuth();
+  const unread = useUnreadMessages();
 
   const handleLogout = async () => {
     await signOut();
@@ -57,7 +59,12 @@ export function StudentSidebar() {
                 }`}
               >
                 <item.icon className="w-5 h-5" />
-                {item.label}
+                <span className="flex-1 text-left">{item.label}</span>
+                {item.badge === 'unread' && unread > 0 && (
+                  <span className="ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-semibold rounded-full bg-destructive text-destructive-foreground">
+                    {unread > 99 ? '99+' : unread}
+                  </span>
+                )}
               </button>
             </li>
           ))}
