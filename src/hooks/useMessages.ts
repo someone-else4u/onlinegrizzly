@@ -12,6 +12,10 @@ interface Message {
   text: string;
   created_at: string;
   sender_name?: string;
+  read_at?: string | null;
+  attachment_url?: string | null;
+  attachment_name?: string | null;
+  attachment_type?: string | null;
 }
 
 interface ChatContact {
@@ -19,6 +23,8 @@ interface ChatContact {
   name: string;
   email?: string;
   type: 'user' | 'group';
+  online?: boolean;
+  unread?: number;
 }
 
 export function useMessages() {
@@ -27,10 +33,11 @@ export function useMessages() {
   const [contacts, setContacts] = useState<ChatContact[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedContact, setSelectedContact] = useState<ChatContact | null>(null);
+  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
+  const [unreadByContact, setUnreadByContact] = useState<Record<string, number>>({});
   const profileCache = useRef<Record<string, string>>({});
   const selectedContactRef = useRef<ChatContact | null>(null);
 
-  // Keep ref in sync so realtime callback always sees latest
   useEffect(() => {
     selectedContactRef.current = selectedContact;
   }, [selectedContact]);
@@ -43,6 +50,22 @@ export function useMessages() {
     return name;
   };
 
+  const fetchUnreadCounts = useCallback(async () => {
+    if (!user) return;
+    // Direct unread (messages addressed to me, not yet read)
+    const { data: direct } = await supabase
+      .from('messages')
+      .select('sender_id')
+      .eq('is_group', false)
+      .eq('receiver_id', user.id)
+      .is('read_at', null);
+    const counts: Record<string, number> = {};
+    (direct || []).forEach((m: any) => {
+      counts[m.sender_id] = (counts[m.sender_id] || 0) + 1;
+    });
+    setUnreadByContact(counts);
+  }, [user]);
+
   const fetchContacts = useCallback(async () => {
     if (!user) return;
     try {
@@ -51,8 +74,10 @@ export function useMessages() {
           supabase.from('profiles').select('user_id, name, email').order('name'),
           supabase.from('chat_groups').select('id, name, description'),
         ]);
-        const studentContacts: ChatContact[] = (students || []).map(s => ({ id: s.user_id, name: s.name, email: s.email, type: 'user' }));
-        const groupContacts: ChatContact[] = (groups || []).map(g => ({ id: g.id, name: g.name, type: 'group' }));
+        const studentContacts: ChatContact[] = (students || [])
+          .filter((s: any) => s.user_id !== user.id)
+          .map((s: any) => ({ id: s.user_id, name: s.name, email: s.email, type: 'user' }));
+        const groupContacts: ChatContact[] = (groups || []).map((g: any) => ({ id: g.id, name: g.name, type: 'group' }));
         setContacts([...studentContacts, ...groupContacts]);
       } else {
         const { data: admins } = await supabase.from('user_roles').select('user_id').eq('role', 'admin');
@@ -77,6 +102,22 @@ export function useMessages() {
     }
   }, [user, role]);
 
+  const markRead = useCallback(async (contact: ChatContact) => {
+    if (!user || contact.type !== 'user') return;
+    await supabase
+      .from('messages')
+      .update({ read_at: new Date().toISOString() })
+      .eq('is_group', false)
+      .eq('receiver_id', user.id)
+      .eq('sender_id', contact.id)
+      .is('read_at', null);
+    setUnreadByContact(prev => {
+      const n = { ...prev };
+      delete n[contact.id];
+      return n;
+    });
+  }, [user]);
+
   const fetchMessages = useCallback(async () => {
     if (!user || !selectedContact) return;
     try {
@@ -99,13 +140,18 @@ export function useMessages() {
         sender_name: profileCache.current[msg.sender_id] || 'Unknown',
       }));
       setMessages(messagesWithNames);
+      await markRead(selectedContact);
     } catch (error) {
       console.error('Error fetching messages:', error);
     }
-  }, [user, selectedContact]);
+  }, [user, selectedContact, markRead]);
 
-  const sendMessage = async (text: string) => {
-    if (!user || !selectedContact || !text.trim() || !role) return;
+  const sendMessage = async (
+    text: string,
+    attachment?: { url: string; name: string; type: string }
+  ) => {
+    if (!user || !selectedContact || !role) return;
+    if (!text.trim() && !attachment) return;
     try {
       const { error } = await supabase.from('messages').insert({
         sender_id: user.id,
@@ -114,17 +160,33 @@ export function useMessages() {
         is_group: selectedContact.type === 'group',
         receiver_id: selectedContact.type === 'user' ? selectedContact.id : null,
         group_id: selectedContact.type === 'group' ? selectedContact.id : null,
+        attachment_url: attachment?.url ?? null,
+        attachment_name: attachment?.name ?? null,
+        attachment_type: attachment?.type ?? null,
       });
       if (error) throw error;
-      // Don't manually append – realtime will handle it
     } catch (error) {
       console.error('Error sending message:', error);
     }
   };
 
+  const uploadAttachment = async (file: File) => {
+    if (!user) return null;
+    const ext = file.name.split('.').pop();
+    const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error } = await supabase.storage.from('chat-attachments').upload(path, file);
+    if (error) {
+      console.error('Upload error:', error);
+      return null;
+    }
+    const { data } = supabase.storage.from('chat-attachments').getPublicUrl(path);
+    return { url: data.publicUrl, name: file.name, type: file.type };
+  };
+
   useEffect(() => {
     fetchContacts().finally(() => setLoading(false));
-  }, [fetchContacts]);
+    fetchUnreadCounts();
+  }, [fetchContacts, fetchUnreadCounts]);
 
   useEffect(() => {
     if (selectedContact) {
@@ -134,10 +196,9 @@ export function useMessages() {
     }
   }, [selectedContact, fetchMessages]);
 
-  // Real-time subscription — single channel for user's lifetime
+  // Realtime messages
   useEffect(() => {
     if (!user) return;
-
     const channel = supabase
       .channel(`messages-rt-${user.id}`)
       .on(
@@ -146,8 +207,16 @@ export function useMessages() {
         async (payload) => {
           const newMsg = payload.new as any;
           const current = selectedContactRef.current;
-          if (!current) return;
 
+          // Update unread counter for direct messages addressed to me
+          if (!newMsg.is_group && newMsg.receiver_id === user.id && newMsg.sender_id !== user.id) {
+            const isOpen = current?.type === 'user' && current.id === newMsg.sender_id;
+            if (!isOpen) {
+              setUnreadByContact(prev => ({ ...prev, [newMsg.sender_id]: (prev[newMsg.sender_id] || 0) + 1 }));
+            }
+          }
+
+          if (!current) return;
           const isRelevant = current.type === 'group'
             ? newMsg.group_id === current.id && newMsg.is_group === true
             : !newMsg.is_group &&
@@ -157,10 +226,13 @@ export function useMessages() {
           if (isRelevant) {
             const senderName = await getProfileName(newMsg.sender_id);
             setMessages(prev => {
-              // Deduplicate by id
               if (prev.some(m => m.id === newMsg.id)) return prev;
               return [...prev, { ...newMsg, sender_name: senderName }];
             });
+            // auto mark as read if I'm the recipient and the chat is open
+            if (!newMsg.is_group && newMsg.receiver_id === user.id) {
+              markRead(current);
+            }
           }
         }
       )
@@ -169,11 +241,47 @@ export function useMessages() {
     return () => {
       supabase.removeChannel(channel);
     };
+  }, [user, markRead]);
+
+  // Presence channel for online/offline indicators
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase.channel('online-users', {
+      config: { presence: { key: user.id } },
+    });
+    channel
+      .on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState();
+        setOnlineUsers(new Set(Object.keys(state)));
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await channel.track({ online_at: new Date().toISOString() });
+        }
+      });
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
+  const enrichedContacts: ChatContact[] = contacts.map(c => ({
+    ...c,
+    online: c.type === 'user' ? onlineUsers.has(c.id) : undefined,
+    unread: c.type === 'user' ? (unreadByContact[c.id] || 0) : 0,
+  }));
+
+  const totalUnread = Object.values(unreadByContact).reduce((a, b) => a + b, 0);
+
   return {
-    messages, contacts, loading,
-    selectedContact, setSelectedContact,
-    sendMessage, refetch: fetchMessages,
+    messages,
+    contacts: enrichedContacts,
+    loading,
+    selectedContact,
+    setSelectedContact,
+    sendMessage,
+    uploadAttachment,
+    refetch: fetchMessages,
+    totalUnread,
+    onlineUsers,
   };
 }
