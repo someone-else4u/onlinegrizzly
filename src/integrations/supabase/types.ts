@@ -72,30 +72,42 @@ export type Database = {
       }
       messages: {
         Row: {
+          attachment_name: string | null
+          attachment_type: string | null
+          attachment_url: string | null
           created_at: string
           group_id: string | null
           id: string
           is_group: boolean
+          read_at: string | null
           receiver_id: string | null
           sender_id: string
           sender_role: Database["public"]["Enums"]["app_role"]
           text: string
         }
         Insert: {
+          attachment_name?: string | null
+          attachment_type?: string | null
+          attachment_url?: string | null
           created_at?: string
           group_id?: string | null
           id?: string
           is_group?: boolean
+          read_at?: string | null
           receiver_id?: string | null
           sender_id: string
           sender_role: Database["public"]["Enums"]["app_role"]
           text: string
         }
         Update: {
+          attachment_name?: string | null
+          attachment_type?: string | null
+          attachment_url?: string | null
           created_at?: string
           group_id?: string | null
           id?: string
           is_group?: boolean
+          read_at?: string | null
           receiver_id?: string | null
           sender_id?: string
           sender_role?: Database["public"]["Enums"]["app_role"]
