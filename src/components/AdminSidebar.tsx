@@ -12,6 +12,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { Logo } from "@/components/Logo";
+import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 
 const sidebarItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/admin-dashboard' },
@@ -19,7 +20,7 @@ const sidebarItems = [
   { icon: Users, label: 'Students', path: '/admin/students' },
   { icon: BarChart3, label: 'Analytics', path: '/admin/analytics' },
   { icon: Trophy, label: 'Results', path: '/admin/results' },
-  { icon: MessageSquare, label: 'Messages', path: '/admin/messages' },
+  { icon: MessageSquare, label: 'Messages', path: '/admin/messages', badge: 'unread' as const },
   { icon: Settings, label: 'Settings', path: '/admin/settings' },
 ];
 
@@ -27,6 +28,7 @@ export function AdminSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { signOut, profile } = useAuth();
+  const unread = useUnreadMessages();
 
   const handleLogout = async () => {
     await signOut();
@@ -59,7 +61,12 @@ export function AdminSidebar() {
                 }`}
               >
                 <item.icon className="w-5 h-5" />
-                {item.label}
+                <span className="flex-1 text-left">{item.label}</span>
+                {item.badge === 'unread' && unread > 0 && (
+                  <span className="ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-semibold rounded-full bg-destructive text-destructive-foreground">
+                    {unread > 99 ? '99+' : unread}
+                  </span>
+                )}
               </button>
             </li>
           ))}
