@@ -72,9 +72,11 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ["Nunito", "sans-serif"],
-        display: ["Quicksand", "sans-serif"],
+        sans: ["Jost", "Futura", "sans-serif"],
+        display: ["Jost", "Futura", "sans-serif"],
+        tech: ["Orbitron", "Jost", "sans-serif"],
       },
+
       keyframes: {
         "accordion-down": {
           from: { height: "0" },
