@@ -14,7 +14,7 @@ export function Hero() {
   ];
 
   return (
-    <section className="relative min-h-screen bg-gradient-hero overflow-hidden">
+    <section className="relative min-h-[92vh] lg:min-h-[880px] bg-gradient-hero overflow-hidden">
       {/* Ambient mesh + grid */}
       <div className="absolute inset-0 bg-gradient-mesh" />
       <div className="absolute inset-0 grid-lines opacity-70" />
