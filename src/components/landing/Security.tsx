@@ -24,10 +24,10 @@ const detectedBehaviors = [
 
 export function Security() {
   return (
-    <section id="security" className="py-24 bg-gradient-hero text-primary-foreground">
+    <section id="security" className="py-24 bg-gradient-hero text-hero-foreground">
       <div className="container mx-auto px-4">
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-foreground/10 border border-primary-foreground/20 text-sm font-semibold mb-4">
+          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-hero-foreground/10 border border-hero-foreground/20 text-sm font-semibold mb-4">
             <Shield className="w-4 h-4 text-accent" />
             Enterprise Security
           </span>
@@ -35,7 +35,7 @@ export function Security() {
             Anti-Cheating Technology That
             <span className="text-gradient"> Actually Works</span>
           </h2>
-          <p className="text-lg text-primary-foreground/70">
+          <p className="text-lg text-hero-foreground/70">
             Our multi-layer security system ensures exam integrity with 99.9% accuracy in detecting suspicious behavior.
           </p>
         </div>
@@ -48,17 +48,17 @@ export function Security() {
               {securityFeatures.map((feature, index) => (
                 <div 
                   key={index}
-                  className="flex items-center gap-3 p-3 rounded-lg bg-primary-foreground/5 border border-primary-foreground/10"
+                  className="flex items-center gap-3 p-3 rounded-lg bg-hero-foreground/5 border border-hero-foreground/10"
                 >
                   <CheckCircle2 className="w-5 h-5 text-success flex-shrink-0" />
-                  <span className="text-sm text-primary-foreground/90">{feature}</span>
+                  <span className="text-sm text-hero-foreground/90">{feature}</span>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Live Monitoring Preview */}
-          <div className="bg-primary-foreground/5 border border-primary-foreground/10 rounded-2xl p-6">
+          <div className="bg-hero-foreground/5 border border-hero-foreground/10 rounded-2xl p-6">
             <h3 className="text-xl font-display font-semibold mb-4 flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
               Live Monitoring Dashboard
@@ -68,7 +68,7 @@ export function Security() {
               {detectedBehaviors.map((item, index) => (
                 <div 
                   key={index}
-                  className="flex items-center justify-between p-4 rounded-lg bg-background/5 border border-primary-foreground/10"
+                  className="flex items-center justify-between p-4 rounded-lg bg-background/5 border border-hero-foreground/10"
                 >
                   <div className="flex items-center gap-3">
                     {item.risk === 'high' ? (
@@ -78,7 +78,7 @@ export function Security() {
                     ) : (
                       <CheckCircle2 className="w-5 h-5 text-success" />
                     )}
-                    <span className="text-primary-foreground/90">{item.behavior}</span>
+                    <span className="text-hero-foreground/90">{item.behavior}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <span className={`px-2 py-1 rounded text-xs font-medium ${
@@ -88,7 +88,7 @@ export function Security() {
                     }`}>
                       {item.risk.toUpperCase()}
                     </span>
-                    <span className="text-primary-foreground/60 text-sm">{item.count}x</span>
+                    <span className="text-hero-foreground/60 text-sm">{item.count}x</span>
                   </div>
                 </div>
               ))}
@@ -98,8 +98,8 @@ export function Security() {
               <div className="flex items-start gap-3">
                 <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-medium text-primary-foreground mb-1">Integrity Alert</p>
-                  <p className="text-xs text-primary-foreground/70">
+                  <p className="text-sm font-medium text-hero-foreground mb-1">Integrity Alert</p>
+                  <p className="text-xs text-hero-foreground/70">
                     Student ID: JEE2024-1234 flagged for multiple tab switches. Auto-generated report sent to admin.
                   </p>
                 </div>

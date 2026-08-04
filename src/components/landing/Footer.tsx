@@ -10,52 +10,52 @@ export function Footer() {
               <div className="w-10 h-10 bg-accent rounded-lg flex items-center justify-center">
                 <Shield className="w-6 h-6 text-accent-foreground" />
               </div>
-              <span className="text-xl font-display font-bold text-primary-foreground">GRIZZLY INTEGRATED</span>
+              <span className="text-xl font-display font-bold text-hero-foreground">GRIZZLY INTEGRATED</span>
             </div>
-            <p className="text-sm text-primary-foreground/60">
+            <p className="text-sm text-hero-foreground/60">
               India's most trusted online exam platform for JEE and NEET preparation.
             </p>
           </div>
 
           <div>
-            <h4 className="font-semibold text-primary-foreground mb-4">Platform</h4>
-            <ul className="space-y-2 text-sm text-primary-foreground/60">
-              <li><a href="#" className="hover:text-primary-foreground transition-colors">Features</a></li>
-              <li><a href="#" className="hover:text-primary-foreground transition-colors">Security</a></li>
-              <li><a href="#" className="hover:text-primary-foreground transition-colors">Pricing</a></li>
-              <li><a href="#" className="hover:text-primary-foreground transition-colors">FAQ</a></li>
+            <h4 className="font-semibold text-hero-foreground mb-4">Platform</h4>
+            <ul className="space-y-2 text-sm text-hero-foreground/60">
+              <li><a href="#" className="hover:text-hero-foreground transition-colors">Features</a></li>
+              <li><a href="#" className="hover:text-hero-foreground transition-colors">Security</a></li>
+              <li><a href="#" className="hover:text-hero-foreground transition-colors">Pricing</a></li>
+              <li><a href="#" className="hover:text-hero-foreground transition-colors">FAQ</a></li>
             </ul>
           </div>
 
           <div>
-            <h4 className="font-semibold text-primary-foreground mb-4">Resources</h4>
-            <ul className="space-y-2 text-sm text-primary-foreground/60">
-              <li><a href="#" className="hover:text-primary-foreground transition-colors">Blog</a></li>
-              <li><a href="#" className="hover:text-primary-foreground transition-colors">Study Material</a></li>
-              <li><a href="#" className="hover:text-primary-foreground transition-colors">Video Tutorials</a></li>
-              <li><a href="#" className="hover:text-primary-foreground transition-colors">Success Stories</a></li>
+            <h4 className="font-semibold text-hero-foreground mb-4">Resources</h4>
+            <ul className="space-y-2 text-sm text-hero-foreground/60">
+              <li><a href="#" className="hover:text-hero-foreground transition-colors">Blog</a></li>
+              <li><a href="#" className="hover:text-hero-foreground transition-colors">Study Material</a></li>
+              <li><a href="#" className="hover:text-hero-foreground transition-colors">Video Tutorials</a></li>
+              <li><a href="#" className="hover:text-hero-foreground transition-colors">Success Stories</a></li>
             </ul>
           </div>
 
           <div>
-            <h4 className="font-semibold text-primary-foreground mb-4">Support</h4>
-            <ul className="space-y-2 text-sm text-primary-foreground/60">
-              <li><a href="#" className="hover:text-primary-foreground transition-colors">Help Center</a></li>
-              <li><a href="#" className="hover:text-primary-foreground transition-colors">Contact Us</a></li>
-              <li><a href="#" className="hover:text-primary-foreground transition-colors">Terms of Service</a></li>
-              <li><a href="#" className="hover:text-primary-foreground transition-colors">Privacy Policy</a></li>
+            <h4 className="font-semibold text-hero-foreground mb-4">Support</h4>
+            <ul className="space-y-2 text-sm text-hero-foreground/60">
+              <li><a href="#" className="hover:text-hero-foreground transition-colors">Help Center</a></li>
+              <li><a href="#" className="hover:text-hero-foreground transition-colors">Contact Us</a></li>
+              <li><a href="#" className="hover:text-hero-foreground transition-colors">Terms of Service</a></li>
+              <li><a href="#" className="hover:text-hero-foreground transition-colors">Privacy Policy</a></li>
             </ul>
           </div>
         </div>
 
-        <div className="border-t border-primary-foreground/10 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-primary-foreground/50">
+        <div className="border-t border-hero-foreground/10 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
+          <p className="text-sm text-hero-foreground/50">
             © 2024 GRIZZLY INTEGRATED. All rights reserved.
           </p>
-          <div className="flex items-center gap-6 text-sm text-primary-foreground/50">
-            <a href="#" className="hover:text-primary-foreground transition-colors">Twitter</a>
-            <a href="#" className="hover:text-primary-foreground transition-colors">LinkedIn</a>
-            <a href="#" className="hover:text-primary-foreground transition-colors">YouTube</a>
+          <div className="flex items-center gap-6 text-sm text-hero-foreground/50">
+            <a href="#" className="hover:text-hero-foreground transition-colors">Twitter</a>
+            <a href="#" className="hover:text-hero-foreground transition-colors">LinkedIn</a>
+            <a href="#" className="hover:text-hero-foreground transition-colors">YouTube</a>
           </div>
         </div>
       </div>

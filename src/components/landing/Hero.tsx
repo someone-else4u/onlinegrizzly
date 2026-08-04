@@ -25,14 +25,14 @@ export function Hero() {
       <nav className="fixed top-0 left-0 right-0 z-50 glass-dark">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <Logo size="sm" />
-          <div className="hidden md:flex items-center gap-8 text-sm text-primary-foreground/70">
+          <div className="hidden md:flex items-center gap-8 text-sm text-hero-foreground/70">
             <a href="#features" className="hover:text-accent transition-colors">Platform</a>
             <a href="#intel" className="hover:text-accent transition-colors">Rank Intel</a>
             <a href="#security" className="hover:text-accent transition-colors">Security</a>
           </div>
           <div className="flex items-center gap-2">
             <Link to="/login">
-              <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary/15">
+              <Button variant="ghost" size="sm" className="text-hero-foreground hover:bg-primary/15">
                 Sign In
               </Button>
             </Link>
@@ -55,12 +55,12 @@ export function Hero() {
               <span className="tracking-widest-xs text-accent">JEE · NEET · NDA Test Engine</span>
             </div>
 
-            <h1 className="font-tech text-3xl md:text-5xl lg:text-[3.4rem] font-extrabold leading-[1.05] text-primary-foreground uppercase">
+            <h1 className="font-tech text-3xl md:text-5xl lg:text-[3.4rem] font-extrabold leading-[1.05] text-hero-foreground uppercase">
               The Exam Hall,
               <span className="block text-gradient neon-text">Re-Engineered</span>
             </h1>
 
-            <p className="mt-6 text-base md:text-lg text-primary-foreground/70 max-w-xl">
+            <p className="mt-6 text-base md:text-lg text-hero-foreground/70 max-w-xl">
               Simulate the real paper end to end — AI-imported past questions, LaTeX-perfect maths,
               locked-down proctoring, and instant All India Rank intelligence.
             </p>
@@ -73,7 +73,7 @@ export function Hero() {
                 </Button>
               </Link>
               <a href="#intel">
-                <Button size="lg" variant="outline" className="w-full sm:w-auto rounded-full border-primary/40 bg-transparent text-primary-foreground hover:bg-primary/10">
+                <Button size="lg" variant="outline" className="w-full sm:w-auto rounded-full border-primary/40 bg-transparent text-hero-foreground hover:bg-primary/10">
                   Predict My Rank
                 </Button>
               </a>
@@ -93,8 +93,8 @@ export function Hero() {
                 style={{ animationDelay: `${0.1 + i * 0.08}s` }}
               >
                 <tile.icon className="w-6 h-6 text-accent mb-3 group-hover:scale-110 transition-transform" />
-                <h3 className="font-tech text-sm uppercase tracking-widest text-primary-foreground">{tile.title}</h3>
-                <p className="mt-1.5 text-sm text-primary-foreground/60">{tile.copy}</p>
+                <h3 className="font-tech text-sm uppercase tracking-widest text-hero-foreground">{tile.title}</h3>
+                <p className="mt-1.5 text-sm text-hero-foreground/60">{tile.copy}</p>
               </div>
             ))}
           </div>
@@ -107,8 +107,8 @@ export function Hero() {
               style={{ animationDelay: `${0.3 + index * 0.06}s` }}
             >
               <stat.icon className="w-5 h-5 text-accent mb-3" />
-              <div className="font-tech text-2xl md:text-3xl font-bold text-primary-foreground">{stat.value}</div>
-              <div className="mt-1 tracking-widest-xs text-primary-foreground/50">{stat.label}</div>
+              <div className="font-tech text-2xl md:text-3xl font-bold text-hero-foreground">{stat.value}</div>
+              <div className="mt-1 tracking-widest-xs text-hero-foreground/50">{stat.label}</div>
             </div>
           ))}
         </div>
