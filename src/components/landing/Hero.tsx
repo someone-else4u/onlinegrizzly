@@ -24,7 +24,15 @@ export function Hero() {
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 glass-dark">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <Logo size="sm" />
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-lg bg-primary/15 border border-primary/40 flex items-center justify-center shadow-glow">
+              <Shield className="w-4 h-4 text-accent" />
+            </div>
+            <span className="font-tech text-sm md:text-base font-bold uppercase tracking-[0.18em] text-hero-foreground">
+              Grizzly
+            </span>
+          </div>
+
           <div className="hidden md:flex items-center gap-8 text-sm text-hero-foreground/70">
             <a href="#features" className="hover:text-accent transition-colors">Platform</a>
             <a href="#intel" className="hover:text-accent transition-colors">Rank Intel</a>

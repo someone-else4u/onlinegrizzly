@@ -42,6 +42,9 @@
 
     --radius: 0.75rem;
 
+    --hero-foreground: 165 20% 94%;
+
+
     --sidebar-background: 209 53% 11%;
     --sidebar-foreground: 165 25% 90%;
     --sidebar-primary: 165 70% 48%;
@@ -99,6 +102,9 @@
 
     --warning: 38 90% 55%;
     --warning-foreground: 209 60% 7%;
+
+    --hero-foreground: 165 20% 94%;
+
 
     --border: 209 28% 19%;
     --input: 209 28% 19%;
