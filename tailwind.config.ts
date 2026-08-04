@@ -43,6 +43,10 @@ export default {
           DEFAULT: "hsl(var(--success))",
           foreground: "hsl(var(--success-foreground))",
         },
+        hero: {
+          foreground: "hsl(var(--hero-foreground))",
+        },
+
         warning: {
           DEFAULT: "hsl(var(--warning))",
           foreground: "hsl(var(--warning-foreground))",
@@ -72,9 +76,11 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ["Nunito", "sans-serif"],
-        display: ["Quicksand", "sans-serif"],
+        sans: ["Jost", "Futura", "sans-serif"],
+        display: ["Jost", "Futura", "sans-serif"],
+        tech: ["Orbitron", "Jost", "sans-serif"],
       },
+
       keyframes: {
         "accordion-down": {
           from: { height: "0" },

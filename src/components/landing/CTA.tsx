@@ -14,17 +14,17 @@ export function CTA() {
           </div>
 
           <div className="relative z-10">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-foreground/10 border border-primary-foreground/20 mb-6">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-hero-foreground/10 border border-hero-foreground/20 mb-6">
               <Shield className="w-4 h-4 text-accent" />
-              <span className="text-sm text-primary-foreground/80">Start Your JEE/NEET Journey</span>
+              <span className="text-sm text-hero-foreground/80">Start Your JEE/NEET Journey</span>
             </div>
 
-            <h2 className="text-3xl md:text-5xl font-display font-bold text-primary-foreground mb-4">
+            <h2 className="text-3xl md:text-5xl font-display font-bold text-hero-foreground mb-4">
               Ready to Practice with
               <span className="text-gradient"> Real Exam Conditions?</span>
             </h2>
 
-            <p className="text-lg text-primary-foreground/70 mb-8 max-w-2xl mx-auto">
+            <p className="text-lg text-hero-foreground/70 mb-8 max-w-2xl mx-auto">
               Join thousands of successful aspirants who improved their scores by 30% using our secure testing platform.
             </p>
 
@@ -42,7 +42,7 @@ export function CTA() {
               </Link>
             </div>
 
-            <p className="mt-6 text-sm text-primary-foreground/50">
+            <p className="mt-6 text-sm text-hero-foreground/50">
               No credit card required • 7-day free trial • Cancel anytime
             </p>
           </div>
