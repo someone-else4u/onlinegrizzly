@@ -2,7 +2,6 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Clock, Trophy, Users, Shield, Cpu, ScanFace, Sigma } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useLandingStats } from "@/hooks/useLandingStats";
-import { Logo } from "@/components/Logo";
 
 export function Hero() {
   const { stats } = useLandingStats();
