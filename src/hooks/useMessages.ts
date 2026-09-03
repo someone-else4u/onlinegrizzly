@@ -139,12 +139,29 @@ export function useMessages() {
         ...msg,
         sender_name: profileCache.current[msg.sender_id] || 'Unknown',
       }));
-      setMessages(messagesWithNames);
+      setMessages(prev => {
+        const ids = new Set(messagesWithNames.map(m => m.id));
+        const extras = prev.filter(m => !ids.has(m.id) && new Date(m.created_at).getTime() > Date.now() - 60000);
+        return [...messagesWithNames, ...extras];
+      });
       await markRead(selectedContact);
     } catch (error) {
       console.error('Error fetching messages:', error);
     }
   }, [user, selectedContact, markRead]);
+
+  const roomKey = (contact: ChatContact) =>
+    contact.type === 'group'
+      ? `room-group-${contact.id}`
+      : `room-dm-${[user?.id, contact.id].sort().join('-')}`;
+
+  const appendMessage = useCallback(async (msg: Message) => {
+    const senderName = await getProfileName(msg.sender_id);
+    setMessages(prev => {
+      if (prev.some(m => m.id === msg.id)) return prev;
+      return [...prev, { ...msg, sender_name: senderName }];
+    });
+  }, []);
 
   const sendMessage = async (
     text: string,
@@ -153,7 +170,7 @@ export function useMessages() {
     if (!user || !selectedContact || !role) return;
     if (!text.trim() && !attachment) return;
     try {
-      const { error } = await supabase.from('messages').insert({
+      const { data, error } = await supabase.from('messages').insert({
         sender_id: user.id,
         sender_role: role,
         text: text.trim(),
@@ -163,10 +180,25 @@ export function useMessages() {
         attachment_url: attachment?.url ?? null,
         attachment_name: attachment?.name ?? null,
         attachment_type: attachment?.type ?? null,
-      });
+      }).select('*').single();
       if (error) throw error;
+      if (data) {
+        // Optimistic local append (instant for the sender)
+        await appendMessage(data as Message);
+        // Secondary delivery path: broadcast to the room + recipient inbox.
+        // This works even if postgres_changes is delayed or blocked.
+        const room = supabase.channel(roomKey(selectedContact));
+        await room.send({ type: 'broadcast', event: 'new_message', payload: data });
+        supabase.removeChannel(room);
+        if (selectedContact.type === 'user') {
+          const inbox = supabase.channel(`inbox-${selectedContact.id}`);
+          await inbox.send({ type: 'broadcast', event: 'new_message', payload: data });
+          supabase.removeChannel(inbox);
+        }
+      }
     } catch (error) {
       console.error('Error sending message:', error);
+      throw error;
     }
   };
 
@@ -236,12 +268,74 @@ export function useMessages() {
           }
         }
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('Realtime messages channel:', status, err?.message);
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
   }, [user, markRead]);
+
+  // Broadcast room for the open conversation (secondary realtime path)
+  useEffect(() => {
+    if (!user || !selectedContact) return;
+    const contact = selectedContact;
+    const channel = supabase
+      .channel(roomKey(contact), { config: { broadcast: { self: false } } })
+      .on('broadcast', { event: 'new_message' }, ({ payload }) => {
+        const msg = payload as Message;
+        if (!msg || msg.sender_id === user.id) return;
+        appendMessage(msg);
+        if (!msg.is_group && msg.receiver_id === user.id) markRead(contact);
+      })
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, selectedContact, appendMessage, markRead]);
+
+  // Personal inbox broadcast: bump unread counters for closed conversations
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel(`inbox-${user.id}`)
+      .on('broadcast', { event: 'new_message' }, ({ payload }) => {
+        const msg = payload as Message;
+        if (!msg || msg.is_group || msg.receiver_id !== user.id) return;
+        const current = selectedContactRef.current;
+        const isOpen = current?.type === 'user' && current.id === msg.sender_id;
+        if (!isOpen) {
+          setUnreadByContact(prev => ({ ...prev, [msg.sender_id]: (prev[msg.sender_id] || 0) + 1 }));
+        }
+      })
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  // Polling fallback: if realtime is ever unavailable, refresh every 6s while visible
+  useEffect(() => {
+    if (!user || !selectedContact) return;
+    const id = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchMessages();
+        fetchUnreadCounts();
+      }
+    }, 6000);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') fetchMessages();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [user, selectedContact, fetchMessages, fetchUnreadCounts]);
 
   // Presence channel for online/offline indicators
   useEffect(() => {
