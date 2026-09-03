@@ -33,8 +33,20 @@ export function useUnreadMessages() {
         refresh();
       })
       .subscribe();
+    // Also listen on the personal inbox broadcast + poll as a fallback
+    const inbox = supabase
+      .channel(`inbox-badge-${user.id}`)
+      .on('broadcast', { event: 'new_message' }, () => {
+        refresh();
+      })
+      .subscribe();
+    const id = window.setInterval(() => {
+      if (document.visibilityState === 'visible') refresh();
+    }, 15000);
     return () => {
       supabase.removeChannel(channel);
+      supabase.removeChannel(inbox);
+      window.clearInterval(id);
     };
   }, [user, refresh]);
 
