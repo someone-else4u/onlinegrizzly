@@ -37,6 +37,7 @@ export function useMessages() {
   const [unreadByContact, setUnreadByContact] = useState<Record<string, number>>({});
   const profileCache = useRef<Record<string, string>>({});
   const selectedContactRef = useRef<ChatContact | null>(null);
+  const roomChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   useEffect(() => {
     selectedContactRef.current = selectedContact;
@@ -186,14 +187,20 @@ export function useMessages() {
         // Optimistic local append (instant for the sender)
         await appendMessage(data as Message);
         // Secondary delivery path: broadcast to the room + recipient inbox.
-        // This works even if postgres_changes is delayed or blocked.
-        const room = supabase.channel(roomKey(selectedContact));
-        await room.send({ type: 'broadcast', event: 'new_message', payload: data });
-        supabase.removeChannel(room);
-        if (selectedContact.type === 'user') {
-          const inbox = supabase.channel(`inbox-${selectedContact.id}`);
-          await inbox.send({ type: 'broadcast', event: 'new_message', payload: data });
-          supabase.removeChannel(inbox);
+        // Works even if postgres_changes is delayed or blocked.
+        try {
+          if (roomChannelRef.current) {
+            await roomChannelRef.current.send({ type: 'broadcast', event: 'new_message', payload: data });
+          }
+          if (selectedContact.type === 'user') {
+            for (const topic of [`inbox-${selectedContact.id}`, `inbox-badge-${selectedContact.id}`]) {
+              const ch = supabase.channel(topic);
+              await ch.httpSend('new_message', data);
+              supabase.removeChannel(ch);
+            }
+          }
+        } catch (bErr) {
+          console.warn('Broadcast delivery skipped:', bErr);
         }
       }
     } catch (error) {
@@ -292,7 +299,9 @@ export function useMessages() {
         if (!msg.is_group && msg.receiver_id === user.id) markRead(contact);
       })
       .subscribe();
+    roomChannelRef.current = channel;
     return () => {
+      roomChannelRef.current = null;
       supabase.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

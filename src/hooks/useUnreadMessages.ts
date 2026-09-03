@@ -32,13 +32,13 @@ export function useUnreadMessages() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, () => {
         refresh();
       })
-      .on('broadcast', { event: 'new_message' }, () => {
-        refresh();
-      })
       .subscribe();
     // Also listen on the personal inbox broadcast + poll as a fallback
     const inbox = supabase
       .channel(`inbox-badge-${user.id}`)
+      .on('broadcast', { event: 'new_message' }, () => {
+        refresh();
+      })
       .subscribe();
     const id = window.setInterval(() => {
       if (document.visibilityState === 'visible') refresh();
