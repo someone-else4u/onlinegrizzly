@@ -8,6 +8,7 @@ import { StudentSidebar } from "@/components/StudentSidebar";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { verifySession } from "@/lib/authSession";
+import { AdSlot } from "@/components/ads/AdSlot";
 
 interface Result {
   id: string;
@@ -182,6 +183,7 @@ export default function StudentResults() {
               </div>
             </div>
           )}
+          <AdSlot slot="studentResults" />
         </main>
       </div>
     </div>
